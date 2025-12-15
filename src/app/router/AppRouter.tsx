@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { HashRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { OnboardingPage } from '../../features/onboarding/OnboardingPage';
 import { DashboardLayout } from '../layouts/DashboardLayout';
@@ -42,7 +42,7 @@ const RequireSession = () => {
 };
 
 export const AppRouter = () => (
-  <BrowserRouter>
+  <HashRouter>
     <Routes>
       <Route path="/" element={<OnboardingPage />} />
       <Route element={<RequireSession />}>
@@ -67,5 +67,5 @@ export const AppRouter = () => (
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-  </BrowserRouter>
+  </HashRouter>
 );
