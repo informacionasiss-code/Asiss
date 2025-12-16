@@ -1,18 +1,142 @@
 import { TerminalCode } from '../../shared/types/terminal';
 
-export type PersonalStatus = 'activo' | 'licencia' | 'vacaciones' | 'baja';
+// ==========================================
+// ENUMS & CONSTANTS
+// ==========================================
 
-export interface PersonalViewModel {
+export type StaffStatus = 'ACTIVO' | 'DESVINCULADO';
+
+export type StaffCargo =
+  | 'conductor'
+  | 'inspector_patio'
+  | 'cleaner'
+  | 'planillero'
+  | 'supervisor';
+
+export const STAFF_CARGOS: { value: StaffCargo; label: string }[] = [
+  { value: 'conductor', label: 'Conductor' },
+  { value: 'inspector_patio', label: 'Inspector Patio' },
+  { value: 'cleaner', label: 'Cleaner' },
+  { value: 'planillero', label: 'Planillero' },
+  { value: 'supervisor', label: 'Supervisor' },
+];
+
+export const STAFF_STATUS_OPTIONS: { value: StaffStatus | 'todos'; label: string }[] = [
+  { value: 'todos', label: 'Todos' },
+  { value: 'ACTIVO', label: 'Activo' },
+  { value: 'DESVINCULADO', label: 'Desvinculado' },
+];
+
+// ==========================================
+// DATABASE MODELS
+// ==========================================
+
+export interface Staff {
   id: string;
+  rut: string;
   nombre: string;
-  rol: string;
+  cargo: StaffCargo;
+  terminal_code: TerminalCode;
   turno: string;
-  status: PersonalStatus;
-  terminal: TerminalCode;
-  actualizadoEl: string;
+  horario: string;
+  contacto: string;
+  status: StaffStatus;
+  terminated_at: string | null;
+  termination_comment: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface PersonalFilters {
-  status?: PersonalStatus | 'todos';
+export interface StaffAdmonition {
+  id: string;
+  staff_id: string;
+  reason: string;
+  admonition_date: string;
+  document_path: string;
+  created_at: string;
+}
+
+export interface StaffCap {
+  id: string;
+  scope_type: 'TERMINAL_GROUP' | 'TERMINAL' | 'COMPANY';
+  scope_code: string;
+  cargo: StaffCargo;
+  max_q: number;
+}
+
+// ==========================================
+// FORM VALUES
+// ==========================================
+
+export interface StaffFormValues {
+  rut: string;
+  nombre: string;
+  cargo: StaffCargo;
+  terminal_code: TerminalCode;
+  turno: string;
+  horario: string;
+  contacto: string;
+}
+
+export interface AdmonitionFormValues {
+  reason: string;
+  admonition_date: string;
+  document: File | null;
+}
+
+export interface OffboardFormValues {
+  comment: string;
+}
+
+// ==========================================
+// VIEW MODELS
+// ==========================================
+
+export interface StaffViewModel extends Staff {
+  admonition_count: number;
+}
+
+// ==========================================
+// IDENTITY (for other sections)
+// ==========================================
+
+export interface StaffIdentity {
+  id: string;
+  rut: string;
+  nombre: string;
+  cargo: StaffCargo;
+  terminal_code: TerminalCode;
+  status: StaffStatus;
+}
+
+// ==========================================
+// FILTERS
+// ==========================================
+
+export interface StaffFilters {
+  status?: StaffStatus | 'todos';
+  cargo?: StaffCargo | 'todos';
   search?: string;
+}
+
+// ==========================================
+// COUNTS & CAPS
+// ==========================================
+
+export interface StaffCountByCargo {
+  cargo: StaffCargo;
+  count: number;
+  max_q: number | null;
+}
+
+export interface StaffCountByTerminal {
+  terminal_code: TerminalCode;
+  count: number;
+}
+
+export interface StaffCountsResult {
+  byCargo: StaffCountByCargo[];
+  byTerminal: StaffCountByTerminal[];
+  total: number;
+  erLrTotal?: number;
 }
