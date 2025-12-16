@@ -618,17 +618,16 @@ const formatDate = (date: string) => {
 
 const generateDataRow = (icon: string, label: string, value: string, highlight = false) => `
     <tr>
-        <td style="padding: 16px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px 0 0 12px; vertical-align: middle; width: 160px;">
+        <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; width: 40%; vertical-align: middle;">
             <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                 <tr>
-                    <td style="padding-right: 10px; vertical-align: middle;">${icon}</td>
-                    <td style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">${label}</td>
+                    <td style="padding-right: 12px; vertical-align: middle;">${icon}</td>
+                    <td style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">${label}</td>
                 </tr>
             </table>
         </td>
-        <td style="padding: 16px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 0 12px 12px 0; font-size: 15px; font-weight: ${highlight ? '700' : '500'}; color: ${highlight ? '#1e40af' : '#1e293b'};">${value}</td>
+        <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-size: 14px; font-weight: ${highlight ? '700' : '500'}; color: ${highlight ? '#0f172a' : '#334155'}; text-align: right;">${value}</td>
     </tr>
-    <tr><td colspan="2" style="height: 10px;"></td></tr>
 `;
 
 export const sendAuthorizationEmail = async (
@@ -642,8 +641,8 @@ export const sendAuthorizationEmail = async (
 ): Promise<void> => {
     const isApproved = type === 'AUTORIZADO';
     const statusColor = isApproved ? '#16a34a' : '#dc2626';
-    const statusBg = isApproved ? 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)' : 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)';
-    const statusBorder = isApproved ? '#22c55e' : '#ef4444';
+    const statusBg = isApproved ? '#f0fdf4' : '#fef2f2'; // Very light green/red
+    const statusBorder = isApproved ? '#bbf7d0' : '#fecaca';
     const statusIcon = isApproved ? SVG_ICONS.check : SVG_ICONS.x;
 
     const subject = `${subsection} ${type} - ${nombre}`;
@@ -651,21 +650,17 @@ export const sendAuthorizationEmail = async (
         <!-- Status Banner -->
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 24px;">
             <tr>
-                <td style="background: ${statusBg}; border: 3px solid ${statusBorder}; border-radius: 20px; padding: 32px; text-align: center;">
+                <td style="background: ${statusBg}; border: 1px solid ${statusBorder}; border-radius: 12px; padding: 24px; text-align: center;">
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                         <tr>
-                            <td align="center" style="padding-bottom: 12px;">
+                            <td align="center" style="padding-bottom: 8px;">
                                 ${statusIcon}
                             </td>
                         </tr>
                         <tr>
-                            <td align="center" style="padding-bottom: 8px;">
-                                <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 2px;">Estado del Registro</span>
-                            </td>
-                        </tr>
-                        <tr>
                             <td align="center">
-                                <span style="font-size: 28px; font-weight: 800; color: ${statusColor}; letter-spacing: 1px;">${type}</span>
+                                <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px;">Estado del Registro</span>
+                                <span style="font-size: 20px; font-weight: 800; color: ${statusColor}; letter-spacing: -0.5px;">${type}</span>
                             </td>
                         </tr>
                     </table>
@@ -674,7 +669,7 @@ export const sendAuthorizationEmail = async (
         </table>
         
         <!-- Data Table -->
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; border-spacing: 0; border-collapse: separate;">
             ${generateDataRow(SVG_ICONS.id, 'Subsección', subsection, true)}
             ${generateDataRow(SVG_ICONS.id, 'RUT', rut)}
             ${generateDataRow(SVG_ICONS.user, 'Trabajador', nombre)}
@@ -719,21 +714,17 @@ export const sendRecordCreatedEmail = async (
         <!-- Status Banner -->
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 24px;">
             <tr>
-                <td style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 3px solid #f59e0b; border-radius: 20px; padding: 32px; text-align: center;">
+                <td style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 24px; text-align: center;">
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                         <tr>
-                            <td align="center" style="padding-bottom: 12px;">
+                            <td align="center" style="padding-bottom: 8px;">
                                 ${SVG_ICONS.clock}
                             </td>
                         </tr>
                         <tr>
-                            <td align="center" style="padding-bottom: 8px;">
-                                <span style="font-size: 11px; font-weight: 700; color: #92400e; text-transform: uppercase; letter-spacing: 2px;">Estado del Registro</span>
-                            </td>
-                        </tr>
-                        <tr>
                             <td align="center">
-                                <span style="font-size: 22px; font-weight: 800; color: #78350f; letter-spacing: 1px;">PENDIENTE DE AUTORIZACIÓN</span>
+                                <span style="font-size: 11px; font-weight: 700; color: #92400e; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px;">Estado del Registro</span>
+                                <span style="font-size: 18px; font-weight: 800; color: #b45309; letter-spacing: -0.5px;">PENDIENTE DE AUTORIZACIÓN</span>
                             </td>
                         </tr>
                     </table>
@@ -745,13 +736,13 @@ export const sendRecordCreatedEmail = async (
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 24px;">
             <tr>
                 <td align="center">
-                    <span style="display: inline-block; padding: 10px 28px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 100px; color: white; font-size: 13px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);">${subsection}</span>
+                    <span style="display: inline-block; padding: 8px 20px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 100px; color: #2563eb; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">${subsection}</span>
                 </td>
             </tr>
         </table>
         
         <!-- Data Table -->
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; border-spacing: 0; border-collapse: separate;">
             ${generateDataRow(SVG_ICONS.id, 'RUT', data.rut)}
             ${generateDataRow(SVG_ICONS.user, 'Trabajador', data.nombre, true)}
             ${generateDataRow(SVG_ICONS.building, 'Terminal', displayTerminal(data.terminal as any))}
@@ -762,15 +753,15 @@ export const sendRecordCreatedEmail = async (
         <!-- Registered By -->
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top: 24px;">
             <tr>
-                <td style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 2px solid #93c5fd; border-radius: 16px; padding: 20px;">
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                <td style="padding: 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                         <tr>
-                            <td style="padding-right: 16px; vertical-align: middle;">
-                                <div style="width: 52px; height: 52px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 50%; text-align: center; line-height: 52px; color: white; font-weight: 800; font-size: 22px; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);">${data.createdBy.charAt(0)}</div>
+                            <td width="40" style="padding-right: 12px; vertical-align: middle;">
+                                <div style="width: 40px; height: 40px; background: #2563eb; border-radius: 50%; text-align: center; line-height: 40px; color: white; font-weight: 700; font-size: 16px;">${data.createdBy.charAt(0)}</div>
                             </td>
                             <td style="vertical-align: middle;">
-                                <span style="display: block; font-size: 11px; color: #3b82f6; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px;">Registrado por</span>
-                                <span style="display: block; font-size: 18px; font-weight: 700; color: #1e40af;">${data.createdBy}</span>
+                                <span style="display: block; font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Registrado por</span>
+                                <span style="display: block; font-size: 14px; font-weight: 700; color: #0f172a;">${data.createdBy}</span>
                             </td>
                         </tr>
                     </table>

@@ -97,34 +97,27 @@ export const renderEmailTemplate = ({
   </noscript>
   <![endif]-->
 </head>
-<body style="margin: 0; padding: 0; background: linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; min-height: 100vh;">
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; color: #1e293b;">
   
   <!-- Wrapper Table -->
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="min-height: 100vh;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f1f5f9; width: 100%;">
     <tr>
-      <td align="center" style="padding: 40px 20px;">
+      <td align="center" style="padding: 24px 12px;">
         
         <!-- Container -->
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; width: 100%; margin: 0 auto;">
           
           <!-- Header -->
           <tr>
-            <td align="center" style="padding-bottom: 32px;">
+            <td align="center" style="padding-bottom: 24px;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                 <tr>
-                  <td style="padding: 16px 32px; background: rgba(255,255,255,0.05); border-radius: 100px; border: 1px solid rgba(255,255,255,0.1);">
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-                      <tr>
-                        <td style="padding-right: 12px;">
-                          ${ICONS.logo}
-                        </td>
-                        <td>
-                          <span style="color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: 2px;">ASISS</span>
-                          <br>
-                          <span style="color: rgba(255,255,255,0.5); font-size: 11px; letter-spacing: 1px;">OPERACIONES Y LOGÍSTICA</span>
-                        </td>
-                      </tr>
-                    </table>
+                  <td style="padding-right: 12px; vertical-align: middle;">
+                    ${ICONS.logo}
+                  </td>
+                  <td style="vertical-align: middle;">
+                    <span style="color: #0f172a; font-size: 20px; font-weight: 800; letter-spacing: -0.5px; display: block;">ASISS</span>
+                    <span style="color: #64748b; font-size: 10px; letter-spacing: 1px; font-weight: 700; text-transform: uppercase; display: block; margin-top: 2px;">Operaciones y Logística</span>
                   </td>
                 </tr>
               </table>
@@ -134,20 +127,25 @@ export const renderEmailTemplate = ({
           <!-- Main Card -->
           <tr>
             <td>
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
                 
+                <!-- Top Accent Line -->
+                <tr>
+                  <td style="height: 6px; background: linear-gradient(90deg, ${accentColor} 0%, #1d4ed8 100%);"></td>
+                </tr>
+
                 <!-- Card Header -->
                 <tr>
-                  <td style="background: linear-gradient(135deg, ${accentColor} 0%, #1d4ed8 100%); padding: 40px 32px; text-align: center;">
+                  <td style="padding: 32px 32px 0 32px; text-align: center;">
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                       <tr>
                         <td align="center">
-                          <span style="display: inline-block; padding: 8px 20px; background: rgba(255,255,255,0.15); border-radius: 100px; color: rgba(255,255,255,0.9); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px;">NOTIFICACIÓN SISTEMA</span>
+                          <span style="display: inline-block; padding: 6px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 100px; color: #64748b; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">Notificación Sistema</span>
                         </td>
                       </tr>
                       <tr>
                         <td align="center" style="padding-top: 16px;">
-                          <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 800; line-height: 1.3;">${subject}</h1>
+                          <h1 style="margin: 0; color: #0f172a; font-size: 24px; font-weight: 800; line-height: 1.3; letter-spacing: -0.5px;">${subject}</h1>
                         </td>
                       </tr>
                     </table>
@@ -156,81 +154,51 @@ export const renderEmailTemplate = ({
                 
                 <!-- Card Body -->
                 <tr>
-                  <td style="padding: 40px 32px;">
+                  <td style="padding: 24px 32px 40px 32px;">
                     
-                    <!-- Content Box -->
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 16px; border-left: 4px solid ${accentColor}; margin-bottom: 32px;">
-                      <tr>
-                        <td style="padding: 24px;">
-                          <div style="color: #334155; font-size: 15px; line-height: 1.8;">
-                            ${body}
-                          </div>
-                        </td>
-                      </tr>
-                    </table>
+                    <!-- Dynamic Body Content -->
+                    <div style="color: #334155; font-size: 15px; line-height: 1.6;">
+                      ${body}
+                    </div>
                     
                     <!-- Info Cards -->
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 32px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top: 32px; border-top: 1px solid #f1f5f9; padding-top: 24px;">
                       <tr>
-                        <td width="48%" style="padding-right: 8px;">
-                          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background: #f1f5f9; border-radius: 12px; border: 1px solid #e2e8f0;">
+                        <td width="50%" style="padding-right: 8px; vertical-align: top;">
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                             <tr>
-                              <td style="padding: 16px;">
-                                <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-                                  <tr>
-                                    <td style="padding-right: 10px; vertical-align: top;">
-                                      ${ICONS.building}
-                                    </td>
-                                    <td>
-                                      <span style="display: block; font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Terminales</span>
-                                      <span style="display: block; font-size: 14px; font-weight: 700; color: #1e293b;">${terminals}</span>
-                                    </td>
-                                  </tr>
-                                </table>
+                              <td style="padding-right: 8px; vertical-align: top; padding-top: 2px;">
+                                ${ICONS.building}
+                              </td>
+                              <td>
+                                <span style="display: block; font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Terminales</span>
+                                <span style="display: block; font-size: 13px; font-weight: 600; color: #334155;">${terminals}</span>
                               </td>
                             </tr>
                           </table>
                         </td>
-                        <td width="48%" style="padding-left: 8px;">
-                          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 12px; border: 1px solid #bfdbfe;">
+                        <td width="50%" style="padding-left: 8px; vertical-align: top;">
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                             <tr>
-                              <td style="padding: 16px;">
-                                <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-                                  <tr>
-                                    <td style="padding-right: 10px; vertical-align: top;">
-                                      ${ICONS.mail}
-                                    </td>
-                                    <td>
-                                      <span style="display: block; font-size: 10px; font-weight: 700; color: #3b82f6; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Audiencia</span>
-                                      <span style="display: block; font-size: 14px; font-weight: 700; color: #1e40af;">${audience === 'manual' ? 'Directo' : audience === 'todos' ? 'General' : 'Por Terminal'}</span>
-                                    </td>
-                                  </tr>
-                                </table>
+                              <td style="padding-right: 8px; vertical-align: top; padding-top: 2px;">
+                                ${ICONS.mail}
+                              </td>
+                              <td>
+                                <span style="display: block; font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Audiencia</span>
+                                <span style="display: block; font-size: 13px; font-weight: 600; color: #334155;">${audience === 'manual' ? 'Directo' : audience === 'todos' ? 'General' : 'Por Terminal'}</span>
                               </td>
                             </tr>
                           </table>
                         </td>
-                      </tr>
-                    </table>
-                    
-                    <!-- Divider -->
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 32px;">
-                      <tr>
-                        <td style="height: 1px; background: linear-gradient(90deg, transparent, #e2e8f0, transparent);"></td>
                       </tr>
                     </table>
                     
                     <!-- CTA Button -->
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top: 32px;">
                       <tr>
                         <td align="center">
-                          <a href="${brandUrl}" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, ${accentColor} 0%, #1d4ed8 100%); color: #ffffff !important; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 15px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);">
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-                              <tr>
-                                <td style="color: #ffffff; padding-right: 8px;">Ir al Panel de Asistencia</td>
-                                <td>${ICONS.arrow}</td>
-                              </tr>
-                            </table>
+                          <a href="${brandUrl}" style="display: inline-block; padding: 14px 32px; background: #0f172a; color: #ffffff !important; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 14px; transition: transform 0.2s;">
+                            Ir al Panel de Asistencia
                           </a>
                         </td>
                       </tr>
@@ -245,15 +213,9 @@ export const renderEmailTemplate = ({
           
           <!-- Footer -->
           <tr>
-            <td align="center" style="padding: 40px 20px;">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-                <tr>
-                  <td align="center">
-                    <p style="margin: 0 0 8px 0; color: rgba(255,255,255,0.5); font-size: 12px;">${dateTime}</p>
-                    <p style="margin: 0; color: rgba(255,255,255,0.3); font-size: 11px;">© ${year} Asiss · Operaciones y Logística · Transdev Chile</p>
-                  </td>
-                </tr>
-              </table>
+            <td align="center" style="padding-top: 32px;">
+              <p style="margin: 0 0 8px 0; color: #94a3b8; font-size: 12px;">${dateTime}</p>
+              <p style="margin: 0; color: #cbd5e1; font-size: 11px;">© ${year} Asiss · Operaciones y Logística</p>
             </td>
           </tr>
           
@@ -266,3 +228,4 @@ export const renderEmailTemplate = ({
 </body>
 </html>`;
 };
+
