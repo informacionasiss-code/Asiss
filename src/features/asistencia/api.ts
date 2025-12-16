@@ -317,6 +317,15 @@ export const createCambioDia = async (
 
     // Send email notification
     try {
+        let documentLink = 'No adjunto';
+        if (documentPath) {
+            const { data: urlData } = supabase.storage
+                .from('attendance-docs')
+                .getPublicUrl(documentPath);
+
+            documentLink = `<a href="${urlData.publicUrl}" target="_blank" style="color: #2563eb; text-decoration: underline; font-weight: 700;">Ver Documento Adjunto</a>`;
+        }
+
         await sendRecordCreatedEmail('Cambios de Día', {
             rut: values.rut,
             nombre: values.nombre,
@@ -327,7 +336,7 @@ export const createCambioDia = async (
                 'Jornada Programada': `${values.prog_start || ''} - ${values.prog_end || ''}`,
                 'Día No Trabaja': values.day_off_date || '',
                 'Día Trabaja': values.day_on_date || '',
-                'Documento': documentPath ? 'Sí' : 'No',
+                'Documento': documentLink,
             }
         });
         showSuccessToast(
