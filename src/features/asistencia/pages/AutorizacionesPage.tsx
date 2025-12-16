@@ -13,18 +13,18 @@ import { formatRut } from '../../personal/utils/rutUtils';
 import { isAuthorizer } from '../utils/authorizers';
 import { AttendanceKPIs } from '../components/AttendanceKPIs';
 import { AuthorizeRejectModal } from '../components/AuthorizeRejectModal';
-import { NoMarcacionesForm } from '../forms/NoMarcacionesForm';
-import { useNoMarcaciones, useAttendanceKPIs, useCreateNoMarcacion, useUpdateNoMarcacion, useAuthorize, useReject, useAttendanceRealtime } from '../hooks';
-import { AttendanceFilters, AUTH_STATUS_OPTIONS, NoMarcacion, NoMarcacionFormValues } from '../types';
+import { AutorizacionesForm } from '../forms/AutorizacionesForm';
+import { useAutorizaciones, useAttendanceKPIs, useCreateAutorizacion, useUpdateAutorizacion, useAuthorize, useReject, useAttendanceRealtime } from '../hooks';
+import { AttendanceFilters, AUTH_STATUS_OPTIONS, Autorizacion, AutorizacionFormValues, ENTRY_EXIT_OPTIONS } from '../types';
 
 type ModalState =
     | { type: 'none' }
     | { type: 'create' }
-    | { type: 'edit'; record: NoMarcacion }
-    | { type: 'authorize'; record: NoMarcacion }
-    | { type: 'reject'; record: NoMarcacion };
+    | { type: 'edit'; record: Autorizacion }
+    | { type: 'authorize'; record: Autorizacion }
+    | { type: 'reject'; record: Autorizacion };
 
-export const NoMarcacionesPage = () => {
+export const AutorizacionesPage = () => {
     const terminalContext = useTerminalStore((s) => s.context);
     const setTerminalContext = useTerminalStore((s) => s.setContext);
     const session = useSessionStore((s) => s.session);
@@ -34,33 +34,35 @@ export const NoMarcacionesPage = () => {
     const [filters, setFilters] = useState<AttendanceFilters>({ auth_status: 'todos' });
     const [modal, setModal] = useState<ModalState>({ type: 'none' });
 
-    const query = useNoMarcaciones(terminalContext, filters);
-    const kpis = useAttendanceKPIs('no-marcaciones', terminalContext);
-    const createMutation = useCreateNoMarcacion();
-    const updateMutation = useUpdateNoMarcacion();
+    const query = useAutorizaciones(terminalContext, filters);
+    const kpis = useAttendanceKPIs('autorizaciones', terminalContext);
+    const createMutation = useCreateAutorizacion();
+    const updateMutation = useUpdateAutorizacion();
     const authorizeMutation = useAuthorize();
     const rejectMutation = useReject();
     useAttendanceRealtime();
 
+    const getEntryExitLabel = (value: string) => ENTRY_EXIT_OPTIONS.find(o => o.value === value)?.label || value;
+
     const exportColumns = [
-        { key: 'rut', header: 'RUT', value: (r: NoMarcacion) => formatRut(r.rut) },
-        { key: 'nombre', header: 'Nombre', value: (r: NoMarcacion) => r.nombre },
-        { key: 'area', header: 'Área', value: (r: NoMarcacion) => r.area },
-        { key: 'cargo', header: 'Cargo', value: (r: NoMarcacion) => r.cargo },
-        { key: 'jefe_terminal', header: 'Jefe Terminal', value: (r: NoMarcacion) => r.jefe_terminal },
-        { key: 'terminal', header: 'Terminal', value: (r: NoMarcacion) => displayTerminal(r.terminal_code) },
-        { key: 'cabezal', header: 'Cabezal', value: (r: NoMarcacion) => r.cabezal },
-        { key: 'incident_state', header: 'Estado', value: (r: NoMarcacion) => r.incident_state },
-        { key: 'date', header: 'Fecha', value: (r: NoMarcacion) => r.date },
-        { key: 'auth_status', header: 'Autorización', value: (r: NoMarcacion) => r.auth_status },
+        { key: 'rut', header: 'RUT', value: (r: Autorizacion) => formatRut(r.rut) },
+        { key: 'nombre', header: 'Nombre', value: (r: Autorizacion) => r.nombre },
+        { key: 'cargo', header: 'Cargo', value: (r: Autorizacion) => r.cargo },
+        { key: 'terminal', header: 'Terminal', value: (r: Autorizacion) => displayTerminal(r.terminal_code) },
+        { key: 'turno', header: 'Turno', value: (r: Autorizacion) => r.turno },
+        { key: 'horario', header: 'Horario', value: (r: Autorizacion) => r.horario },
+        { key: 'authorization_date', header: 'Fecha', value: (r: Autorizacion) => r.authorization_date },
+        { key: 'entry_or_exit', header: 'Tipo', value: (r: Autorizacion) => getEntryExitLabel(r.entry_or_exit) },
+        { key: 'motivo', header: 'Motivo', value: (r: Autorizacion) => r.motivo },
+        { key: 'auth_status', header: 'Autorización', value: (r: Autorizacion) => r.auth_status },
     ];
 
-    const handleCreate = async (values: NoMarcacionFormValues) => {
+    const handleCreate = async (values: AutorizacionFormValues) => {
         await createMutation.mutateAsync({ values, createdBy: supervisorName });
         setModal({ type: 'none' });
     };
 
-    const handleUpdate = async (values: NoMarcacionFormValues) => {
+    const handleUpdate = async (values: AutorizacionFormValues) => {
         if (modal.type !== 'edit') return;
         await updateMutation.mutateAsync({ id: modal.record.id, values });
         setModal({ type: 'none' });
@@ -70,13 +72,13 @@ export const NoMarcacionesPage = () => {
         if (modal.type !== 'authorize') return;
         const r = modal.record;
         await authorizeMutation.mutateAsync({
-            subsection: 'no-marcaciones',
+            subsection: 'autorizaciones',
             id: r.id,
             authorizedBy: supervisorName,
             rut: r.rut,
             nombre: r.nombre,
             terminal: r.terminal_code,
-            date: r.date,
+            date: r.authorization_date,
         });
         setModal({ type: 'none' });
     };
@@ -85,14 +87,14 @@ export const NoMarcacionesPage = () => {
         if (modal.type !== 'reject' || !reason) return;
         const r = modal.record;
         await rejectMutation.mutateAsync({
-            subsection: 'no-marcaciones',
+            subsection: 'autorizaciones',
             id: r.id,
             authorizedBy: supervisorName,
             reason,
             rut: r.rut,
             nombre: r.nombre,
             terminal: r.terminal_code,
-            date: r.date,
+            date: r.authorization_date,
         });
         setModal({ type: 'none' });
     };
@@ -105,19 +107,25 @@ export const NoMarcacionesPage = () => {
         }
     };
 
+    const getTypeBadge = (type: string) => {
+        return type === 'ENTRADA'
+            ? <span className="badge bg-blue-100 text-blue-700">Llegada Tardía</span>
+            : <span className="badge bg-purple-100 text-purple-700">Retiro Anticipado</span>;
+    };
+
     return (
         <div className="space-y-4">
             <PageHeader
-                title="No Marcaciones"
-                description="Registros de no marcación de personal"
+                title="Autorizaciones"
+                description="Retiros anticipados y llegadas tardías"
                 actions={
                     <div className="flex gap-2">
                         <button className="btn btn-primary" onClick={() => setModal({ type: 'create' })}>
-                            <Icon name="clipboard" size={18} /> Nuevo Registro
+                            <Icon name="check-circle" size={18} /> Nueva Solicitud
                         </button>
                         <ExportMenu
-                            onExportView={() => exportToXlsx({ filename: 'no_marcaciones', sheetName: 'Datos', rows: query.data || [], columns: exportColumns })}
-                            onExportAll={() => exportToXlsx({ filename: 'no_marcaciones_all', sheetName: 'Datos', rows: query.data || [], columns: exportColumns })}
+                            onExportView={() => exportToXlsx({ filename: 'autorizaciones', sheetName: 'Datos', rows: query.data || [], columns: exportColumns })}
+                            onExportAll={() => exportToXlsx({ filename: 'autorizaciones_all', sheetName: 'Datos', rows: query.data || [], columns: exportColumns })}
                         />
                     </div>
                 }
@@ -151,7 +159,8 @@ export const NoMarcacionesPage = () => {
                                 <th className="table-header-cell">Nombre</th>
                                 <th className="table-header-cell">Terminal</th>
                                 <th className="table-header-cell">Fecha</th>
-                                <th className="table-header-cell">Estado</th>
+                                <th className="table-header-cell">Tipo</th>
+                                <th className="table-header-cell">Motivo</th>
                                 <th className="table-header-cell">Autorización</th>
                                 <th className="table-header-cell text-right">Acciones</th>
                             </tr>
@@ -162,8 +171,9 @@ export const NoMarcacionesPage = () => {
                                     <td className="table-cell font-mono text-sm">{formatRut(row.rut)}</td>
                                     <td className="table-cell font-medium">{row.nombre}</td>
                                     <td className="table-cell">{displayTerminal(row.terminal_code)}</td>
-                                    <td className="table-cell">{row.date}</td>
-                                    <td className="table-cell">{row.incident_state || '-'}</td>
+                                    <td className="table-cell">{row.authorization_date}</td>
+                                    <td className="table-cell">{getTypeBadge(row.entry_or_exit)}</td>
+                                    <td className="table-cell max-w-[200px] truncate" title={row.motivo}>{row.motivo}</td>
                                     <td className="table-cell">{getStatusBadge(row.auth_status)}</td>
                                     <td className="table-cell">
                                         <div className="flex items-center justify-end gap-1">
@@ -191,18 +201,16 @@ export const NoMarcacionesPage = () => {
                 </div>
             )}
 
-            {/* Modals */}
             {(modal.type === 'create' || modal.type === 'edit') && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setModal({ type: 'none' })} />
                     <div className="relative w-full max-w-3xl card p-6 max-h-[90vh] overflow-y-auto animate-scale-in">
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-bold">{modal.type === 'create' ? 'Nuevo Registro' : 'Editar Registro'}</h3>
+                            <h3 className="text-xl font-bold">{modal.type === 'create' ? 'Nueva Solicitud' : 'Editar Solicitud'}</h3>
                             <button onClick={() => setModal({ type: 'none' })} className="text-slate-400 hover:text-slate-600"><Icon name="x" size={24} /></button>
                         </div>
-                        <NoMarcacionesForm
-                            initialData={modal.type === 'edit' ? { ...modal.record, area: modal.record.area ?? 'Logística', cargo: modal.record.cargo ?? '', jefe_terminal: modal.record.jefe_terminal ?? '', cabezal: modal.record.cabezal ?? '', incident_state: modal.record.incident_state ?? '', schedule_in_out: modal.record.schedule_in_out ?? '', time_range: modal.record.time_range ?? '', observations: modal.record.observations ?? '', informed_by: modal.record.informed_by ?? supervisorName } : undefined}
-                            supervisorName={supervisorName}
+                        <AutorizacionesForm
+                            initialData={modal.type === 'edit' ? { ...modal.record, cargo: modal.record.cargo ?? '', turno: modal.record.turno ?? '', horario: modal.record.horario ?? '' } : undefined}
                             onSubmit={modal.type === 'create' ? handleCreate : handleUpdate}
                             onCancel={() => setModal({ type: 'none' })}
                             isLoading={createMutation.isPending || updateMutation.isPending}

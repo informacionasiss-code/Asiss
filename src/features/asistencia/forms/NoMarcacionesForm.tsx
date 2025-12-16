@@ -8,16 +8,17 @@ import { getTerminalChief } from '../utils/authorizers';
 
 interface Props {
     initialData?: Partial<NoMarcacionFormValues>;
+    supervisorName: string;
     onSubmit: (values: NoMarcacionFormValues) => void;
     onCancel: () => void;
     isLoading?: boolean;
 }
 
-export const NoMarcacionesForm = ({ initialData, onSubmit, onCancel, isLoading }: Props) => {
+export const NoMarcacionesForm = ({ initialData, supervisorName, onSubmit, onCancel, isLoading }: Props) => {
     const [form, setForm] = useState<NoMarcacionFormValues>({
         rut: '',
         nombre: '',
-        area: '',
+        area: 'Logística',
         cargo: '',
         jefe_terminal: '',
         terminal_code: 'EL_ROBLE',
@@ -27,7 +28,7 @@ export const NoMarcacionesForm = ({ initialData, onSubmit, onCancel, isLoading }
         date: new Date().toISOString().split('T')[0],
         time_range: '',
         observations: '',
-        informed_by: '',
+        informed_by: supervisorName,
         ...initialData,
     });
 

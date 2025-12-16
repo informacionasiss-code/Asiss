@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Icon, IconName } from '../../shared/components/common/Icon';
 import { NoMarcacionesPage } from './pages/NoMarcacionesPage';
+import { SinCredencialesPage } from './pages/SinCredencialesPage';
+import { CambiosDeDiaPage } from './pages/CambiosDeDiaPage';
+import { AutorizacionesPage } from './pages/AutorizacionesPage';
 import { AttendanceSubsection } from './types';
 
 const TABS: { id: AttendanceSubsection; label: string; icon: IconName }[] = [
@@ -18,29 +21,11 @@ export const AsistenciaPage = () => {
       case 'no-marcaciones':
         return <NoMarcacionesPage />;
       case 'sin-credenciales':
-        return (
-          <div className="card p-8 text-center">
-            <Icon name="key" size={48} className="mx-auto text-slate-300 mb-4" />
-            <h3 className="text-lg font-semibold text-slate-700">Sin Credenciales</h3>
-            <p className="text-slate-500 mt-2">Esta subsección usa la misma estructura que No Marcaciones.</p>
-          </div>
-        );
+        return <SinCredencialesPage />;
       case 'cambios-dia':
-        return (
-          <div className="card p-8 text-center">
-            <Icon name="calendar" size={48} className="mx-auto text-slate-300 mb-4" />
-            <h3 className="text-lg font-semibold text-slate-700">Cambios de Día</h3>
-            <p className="text-slate-500 mt-2">Esta subsección usa la misma estructura que No Marcaciones.</p>
-          </div>
-        );
+        return <CambiosDeDiaPage />;
       case 'autorizaciones':
-        return (
-          <div className="card p-8 text-center">
-            <Icon name="check-circle" size={48} className="mx-auto text-slate-300 mb-4" />
-            <h3 className="text-lg font-semibold text-slate-700">Autorizaciones</h3>
-            <p className="text-slate-500 mt-2">Esta subsección usa la misma estructura que No Marcaciones.</p>
-          </div>
-        );
+        return <AutorizacionesPage />;
       default:
         return null;
     }

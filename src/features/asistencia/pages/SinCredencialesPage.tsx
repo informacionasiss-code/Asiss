@@ -13,18 +13,18 @@ import { formatRut } from '../../personal/utils/rutUtils';
 import { isAuthorizer } from '../utils/authorizers';
 import { AttendanceKPIs } from '../components/AttendanceKPIs';
 import { AuthorizeRejectModal } from '../components/AuthorizeRejectModal';
-import { NoMarcacionesForm } from '../forms/NoMarcacionesForm';
-import { useNoMarcaciones, useAttendanceKPIs, useCreateNoMarcacion, useUpdateNoMarcacion, useAuthorize, useReject, useAttendanceRealtime } from '../hooks';
-import { AttendanceFilters, AUTH_STATUS_OPTIONS, NoMarcacion, NoMarcacionFormValues } from '../types';
+import { SinCredencialesForm } from '../forms/SinCredencialesForm';
+import { useSinCredenciales, useAttendanceKPIs, useCreateSinCredencial, useUpdateSinCredencial, useAuthorize, useReject, useAttendanceRealtime } from '../hooks';
+import { AttendanceFilters, AUTH_STATUS_OPTIONS, SinCredencial, SinCredencialFormValues } from '../types';
 
 type ModalState =
     | { type: 'none' }
     | { type: 'create' }
-    | { type: 'edit'; record: NoMarcacion }
-    | { type: 'authorize'; record: NoMarcacion }
-    | { type: 'reject'; record: NoMarcacion };
+    | { type: 'edit'; record: SinCredencial }
+    | { type: 'authorize'; record: SinCredencial }
+    | { type: 'reject'; record: SinCredencial };
 
-export const NoMarcacionesPage = () => {
+export const SinCredencialesPage = () => {
     const terminalContext = useTerminalStore((s) => s.context);
     const setTerminalContext = useTerminalStore((s) => s.setContext);
     const session = useSessionStore((s) => s.session);
@@ -34,33 +34,33 @@ export const NoMarcacionesPage = () => {
     const [filters, setFilters] = useState<AttendanceFilters>({ auth_status: 'todos' });
     const [modal, setModal] = useState<ModalState>({ type: 'none' });
 
-    const query = useNoMarcaciones(terminalContext, filters);
-    const kpis = useAttendanceKPIs('no-marcaciones', terminalContext);
-    const createMutation = useCreateNoMarcacion();
-    const updateMutation = useUpdateNoMarcacion();
+    const query = useSinCredenciales(terminalContext, filters);
+    const kpis = useAttendanceKPIs('sin-credenciales', terminalContext);
+    const createMutation = useCreateSinCredencial();
+    const updateMutation = useUpdateSinCredencial();
     const authorizeMutation = useAuthorize();
     const rejectMutation = useReject();
     useAttendanceRealtime();
 
     const exportColumns = [
-        { key: 'rut', header: 'RUT', value: (r: NoMarcacion) => formatRut(r.rut) },
-        { key: 'nombre', header: 'Nombre', value: (r: NoMarcacion) => r.nombre },
-        { key: 'area', header: 'Área', value: (r: NoMarcacion) => r.area },
-        { key: 'cargo', header: 'Cargo', value: (r: NoMarcacion) => r.cargo },
-        { key: 'jefe_terminal', header: 'Jefe Terminal', value: (r: NoMarcacion) => r.jefe_terminal },
-        { key: 'terminal', header: 'Terminal', value: (r: NoMarcacion) => displayTerminal(r.terminal_code) },
-        { key: 'cabezal', header: 'Cabezal', value: (r: NoMarcacion) => r.cabezal },
-        { key: 'incident_state', header: 'Estado', value: (r: NoMarcacion) => r.incident_state },
-        { key: 'date', header: 'Fecha', value: (r: NoMarcacion) => r.date },
-        { key: 'auth_status', header: 'Autorización', value: (r: NoMarcacion) => r.auth_status },
+        { key: 'rut', header: 'RUT', value: (r: SinCredencial) => formatRut(r.rut) },
+        { key: 'nombre', header: 'Nombre', value: (r: SinCredencial) => r.nombre },
+        { key: 'terminal', header: 'Terminal', value: (r: SinCredencial) => displayTerminal(r.terminal_code) },
+        { key: 'cabezal', header: 'Cabezal', value: (r: SinCredencial) => r.cabezal },
+        { key: 'date', header: 'Fecha', value: (r: SinCredencial) => r.date },
+        { key: 'start_time', header: 'Hora Inicio', value: (r: SinCredencial) => r.start_time },
+        { key: 'end_time', header: 'Hora Fin', value: (r: SinCredencial) => r.end_time },
+        { key: 'cargo', header: 'Cargo', value: (r: SinCredencial) => r.cargo },
+        { key: 'supervisor_autoriza', header: 'Supervisor Autoriza', value: (r: SinCredencial) => r.supervisor_autoriza },
+        { key: 'auth_status', header: 'Autorización', value: (r: SinCredencial) => r.auth_status },
     ];
 
-    const handleCreate = async (values: NoMarcacionFormValues) => {
+    const handleCreate = async (values: SinCredencialFormValues) => {
         await createMutation.mutateAsync({ values, createdBy: supervisorName });
         setModal({ type: 'none' });
     };
 
-    const handleUpdate = async (values: NoMarcacionFormValues) => {
+    const handleUpdate = async (values: SinCredencialFormValues) => {
         if (modal.type !== 'edit') return;
         await updateMutation.mutateAsync({ id: modal.record.id, values });
         setModal({ type: 'none' });
@@ -70,7 +70,7 @@ export const NoMarcacionesPage = () => {
         if (modal.type !== 'authorize') return;
         const r = modal.record;
         await authorizeMutation.mutateAsync({
-            subsection: 'no-marcaciones',
+            subsection: 'sin-credenciales',
             id: r.id,
             authorizedBy: supervisorName,
             rut: r.rut,
@@ -85,7 +85,7 @@ export const NoMarcacionesPage = () => {
         if (modal.type !== 'reject' || !reason) return;
         const r = modal.record;
         await rejectMutation.mutateAsync({
-            subsection: 'no-marcaciones',
+            subsection: 'sin-credenciales',
             id: r.id,
             authorizedBy: supervisorName,
             reason,
@@ -108,16 +108,16 @@ export const NoMarcacionesPage = () => {
     return (
         <div className="space-y-4">
             <PageHeader
-                title="No Marcaciones"
-                description="Registros de no marcación de personal"
+                title="Sin Credenciales"
+                description="Registros de personal sin credencial"
                 actions={
                     <div className="flex gap-2">
                         <button className="btn btn-primary" onClick={() => setModal({ type: 'create' })}>
-                            <Icon name="clipboard" size={18} /> Nuevo Registro
+                            <Icon name="key" size={18} /> Nuevo Registro
                         </button>
                         <ExportMenu
-                            onExportView={() => exportToXlsx({ filename: 'no_marcaciones', sheetName: 'Datos', rows: query.data || [], columns: exportColumns })}
-                            onExportAll={() => exportToXlsx({ filename: 'no_marcaciones_all', sheetName: 'Datos', rows: query.data || [], columns: exportColumns })}
+                            onExportView={() => exportToXlsx({ filename: 'sin_credenciales', sheetName: 'Datos', rows: query.data || [], columns: exportColumns })}
+                            onExportAll={() => exportToXlsx({ filename: 'sin_credenciales_all', sheetName: 'Datos', rows: query.data || [], columns: exportColumns })}
                         />
                     </div>
                 }
@@ -150,8 +150,9 @@ export const NoMarcacionesPage = () => {
                                 <th className="table-header-cell">RUT</th>
                                 <th className="table-header-cell">Nombre</th>
                                 <th className="table-header-cell">Terminal</th>
+                                <th className="table-header-cell">Cabezal</th>
                                 <th className="table-header-cell">Fecha</th>
-                                <th className="table-header-cell">Estado</th>
+                                <th className="table-header-cell">Hora</th>
                                 <th className="table-header-cell">Autorización</th>
                                 <th className="table-header-cell text-right">Acciones</th>
                             </tr>
@@ -162,8 +163,9 @@ export const NoMarcacionesPage = () => {
                                     <td className="table-cell font-mono text-sm">{formatRut(row.rut)}</td>
                                     <td className="table-cell font-medium">{row.nombre}</td>
                                     <td className="table-cell">{displayTerminal(row.terminal_code)}</td>
+                                    <td className="table-cell">{row.cabezal || '-'}</td>
                                     <td className="table-cell">{row.date}</td>
-                                    <td className="table-cell">{row.incident_state || '-'}</td>
+                                    <td className="table-cell">{row.start_time} - {row.end_time}</td>
                                     <td className="table-cell">{getStatusBadge(row.auth_status)}</td>
                                     <td className="table-cell">
                                         <div className="flex items-center justify-end gap-1">
@@ -191,7 +193,6 @@ export const NoMarcacionesPage = () => {
                 </div>
             )}
 
-            {/* Modals */}
             {(modal.type === 'create' || modal.type === 'edit') && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setModal({ type: 'none' })} />
@@ -200,8 +201,8 @@ export const NoMarcacionesPage = () => {
                             <h3 className="text-xl font-bold">{modal.type === 'create' ? 'Nuevo Registro' : 'Editar Registro'}</h3>
                             <button onClick={() => setModal({ type: 'none' })} className="text-slate-400 hover:text-slate-600"><Icon name="x" size={24} /></button>
                         </div>
-                        <NoMarcacionesForm
-                            initialData={modal.type === 'edit' ? { ...modal.record, area: modal.record.area ?? 'Logística', cargo: modal.record.cargo ?? '', jefe_terminal: modal.record.jefe_terminal ?? '', cabezal: modal.record.cabezal ?? '', incident_state: modal.record.incident_state ?? '', schedule_in_out: modal.record.schedule_in_out ?? '', time_range: modal.record.time_range ?? '', observations: modal.record.observations ?? '', informed_by: modal.record.informed_by ?? supervisorName } : undefined}
+                        <SinCredencialesForm
+                            initialData={modal.type === 'edit' ? { ...modal.record, cabezal: modal.record.cabezal ?? '', start_time: modal.record.start_time ?? '', end_time: modal.record.end_time ?? '', cargo: modal.record.cargo ?? '', supervisor_autoriza: modal.record.supervisor_autoriza ?? '', area: modal.record.area ?? '', responsable: modal.record.responsable ?? '', observacion: modal.record.observacion ?? '' } : undefined}
                             supervisorName={supervisorName}
                             onSubmit={modal.type === 'create' ? handleCreate : handleUpdate}
                             onCancel={() => setModal({ type: 'none' })}

@@ -7,12 +7,13 @@ import { terminalOptions } from '../../../shared/utils/terminal';
 
 interface Props {
     initialData?: Partial<SinCredencialFormValues>;
+    supervisorName: string;
     onSubmit: (values: SinCredencialFormValues) => void;
     onCancel: () => void;
     isLoading?: boolean;
 }
 
-export const SinCredencialesForm = ({ initialData, onSubmit, onCancel, isLoading }: Props) => {
+export const SinCredencialesForm = ({ initialData, supervisorName, onSubmit, onCancel, isLoading }: Props) => {
     const [form, setForm] = useState<SinCredencialFormValues>({
         rut: '',
         nombre: '',
@@ -22,8 +23,8 @@ export const SinCredencialesForm = ({ initialData, onSubmit, onCancel, isLoading
         start_time: '',
         end_time: '',
         cargo: '',
-        supervisor_autoriza: '',
-        area: '',
+        supervisor_autoriza: supervisorName,
+        area: 'Logística',
         responsable: '',
         observacion: '',
         ...initialData,

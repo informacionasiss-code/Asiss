@@ -13,18 +13,19 @@ import { formatRut } from '../../personal/utils/rutUtils';
 import { isAuthorizer } from '../utils/authorizers';
 import { AttendanceKPIs } from '../components/AttendanceKPIs';
 import { AuthorizeRejectModal } from '../components/AuthorizeRejectModal';
-import { NoMarcacionesForm } from '../forms/NoMarcacionesForm';
-import { useNoMarcaciones, useAttendanceKPIs, useCreateNoMarcacion, useUpdateNoMarcacion, useAuthorize, useReject, useAttendanceRealtime } from '../hooks';
-import { AttendanceFilters, AUTH_STATUS_OPTIONS, NoMarcacion, NoMarcacionFormValues } from '../types';
+import { CambiosDeDiaForm } from '../forms/CambiosDeDiaForm';
+import { useCambiosDia, useAttendanceKPIs, useCreateCambioDia, useUpdateCambioDia, useAuthorize, useReject, useAttendanceRealtime } from '../hooks';
+import { getDocumentUrl } from '../api';
+import { AttendanceFilters, AUTH_STATUS_OPTIONS, CambioDia, CambioDiaFormValues } from '../types';
 
 type ModalState =
     | { type: 'none' }
     | { type: 'create' }
-    | { type: 'edit'; record: NoMarcacion }
-    | { type: 'authorize'; record: NoMarcacion }
-    | { type: 'reject'; record: NoMarcacion };
+    | { type: 'edit'; record: CambioDia }
+    | { type: 'authorize'; record: CambioDia }
+    | { type: 'reject'; record: CambioDia };
 
-export const NoMarcacionesPage = () => {
+export const CambiosDeDiaPage = () => {
     const terminalContext = useTerminalStore((s) => s.context);
     const setTerminalContext = useTerminalStore((s) => s.setContext);
     const session = useSessionStore((s) => s.session);
@@ -34,33 +35,33 @@ export const NoMarcacionesPage = () => {
     const [filters, setFilters] = useState<AttendanceFilters>({ auth_status: 'todos' });
     const [modal, setModal] = useState<ModalState>({ type: 'none' });
 
-    const query = useNoMarcaciones(terminalContext, filters);
-    const kpis = useAttendanceKPIs('no-marcaciones', terminalContext);
-    const createMutation = useCreateNoMarcacion();
-    const updateMutation = useUpdateNoMarcacion();
+    const query = useCambiosDia(terminalContext, filters);
+    const kpis = useAttendanceKPIs('cambios-dia', terminalContext);
+    const createMutation = useCreateCambioDia();
+    const updateMutation = useUpdateCambioDia();
     const authorizeMutation = useAuthorize();
     const rejectMutation = useReject();
     useAttendanceRealtime();
 
     const exportColumns = [
-        { key: 'rut', header: 'RUT', value: (r: NoMarcacion) => formatRut(r.rut) },
-        { key: 'nombre', header: 'Nombre', value: (r: NoMarcacion) => r.nombre },
-        { key: 'area', header: 'Área', value: (r: NoMarcacion) => r.area },
-        { key: 'cargo', header: 'Cargo', value: (r: NoMarcacion) => r.cargo },
-        { key: 'jefe_terminal', header: 'Jefe Terminal', value: (r: NoMarcacion) => r.jefe_terminal },
-        { key: 'terminal', header: 'Terminal', value: (r: NoMarcacion) => displayTerminal(r.terminal_code) },
-        { key: 'cabezal', header: 'Cabezal', value: (r: NoMarcacion) => r.cabezal },
-        { key: 'incident_state', header: 'Estado', value: (r: NoMarcacion) => r.incident_state },
-        { key: 'date', header: 'Fecha', value: (r: NoMarcacion) => r.date },
-        { key: 'auth_status', header: 'Autorización', value: (r: NoMarcacion) => r.auth_status },
+        { key: 'rut', header: 'RUT', value: (r: CambioDia) => formatRut(r.rut) },
+        { key: 'nombre', header: 'Nombre', value: (r: CambioDia) => r.nombre },
+        { key: 'terminal', header: 'Terminal', value: (r: CambioDia) => displayTerminal(r.terminal_code) },
+        { key: 'cabezal', header: 'Cabezal', value: (r: CambioDia) => r.cabezal },
+        { key: 'date', header: 'Fecha', value: (r: CambioDia) => r.date },
+        { key: 'prog_start', header: 'Prog. Inicio', value: (r: CambioDia) => r.prog_start },
+        { key: 'prog_end', header: 'Prog. Fin', value: (r: CambioDia) => r.prog_end },
+        { key: 'reprogram_start', header: 'Reprog. Inicio', value: (r: CambioDia) => r.reprogram_start },
+        { key: 'reprogram_end', header: 'Reprog. Fin', value: (r: CambioDia) => r.reprogram_end },
+        { key: 'auth_status', header: 'Autorización', value: (r: CambioDia) => r.auth_status },
     ];
 
-    const handleCreate = async (values: NoMarcacionFormValues) => {
+    const handleCreate = async (values: CambioDiaFormValues) => {
         await createMutation.mutateAsync({ values, createdBy: supervisorName });
         setModal({ type: 'none' });
     };
 
-    const handleUpdate = async (values: NoMarcacionFormValues) => {
+    const handleUpdate = async (values: CambioDiaFormValues) => {
         if (modal.type !== 'edit') return;
         await updateMutation.mutateAsync({ id: modal.record.id, values });
         setModal({ type: 'none' });
@@ -70,7 +71,7 @@ export const NoMarcacionesPage = () => {
         if (modal.type !== 'authorize') return;
         const r = modal.record;
         await authorizeMutation.mutateAsync({
-            subsection: 'no-marcaciones',
+            subsection: 'cambios-dia',
             id: r.id,
             authorizedBy: supervisorName,
             rut: r.rut,
@@ -85,7 +86,7 @@ export const NoMarcacionesPage = () => {
         if (modal.type !== 'reject' || !reason) return;
         const r = modal.record;
         await rejectMutation.mutateAsync({
-            subsection: 'no-marcaciones',
+            subsection: 'cambios-dia',
             id: r.id,
             authorizedBy: supervisorName,
             reason,
@@ -95,6 +96,15 @@ export const NoMarcacionesPage = () => {
             date: r.date,
         });
         setModal({ type: 'none' });
+    };
+
+    const handleViewDocument = async (path: string) => {
+        try {
+            const url = await getDocumentUrl(path);
+            window.open(url, '_blank');
+        } catch (err) {
+            console.error('Error getting document URL:', err);
+        }
     };
 
     const getStatusBadge = (status: string) => {
@@ -108,16 +118,16 @@ export const NoMarcacionesPage = () => {
     return (
         <div className="space-y-4">
             <PageHeader
-                title="No Marcaciones"
-                description="Registros de no marcación de personal"
+                title="Cambios de Día"
+                description="Reprogramaciones de jornada laboral"
                 actions={
                     <div className="flex gap-2">
                         <button className="btn btn-primary" onClick={() => setModal({ type: 'create' })}>
-                            <Icon name="clipboard" size={18} /> Nuevo Registro
+                            <Icon name="calendar" size={18} /> Nuevo Registro
                         </button>
                         <ExportMenu
-                            onExportView={() => exportToXlsx({ filename: 'no_marcaciones', sheetName: 'Datos', rows: query.data || [], columns: exportColumns })}
-                            onExportAll={() => exportToXlsx({ filename: 'no_marcaciones_all', sheetName: 'Datos', rows: query.data || [], columns: exportColumns })}
+                            onExportView={() => exportToXlsx({ filename: 'cambios_dia', sheetName: 'Datos', rows: query.data || [], columns: exportColumns })}
+                            onExportAll={() => exportToXlsx({ filename: 'cambios_dia_all', sheetName: 'Datos', rows: query.data || [], columns: exportColumns })}
                         />
                     </div>
                 }
@@ -151,7 +161,9 @@ export const NoMarcacionesPage = () => {
                                 <th className="table-header-cell">Nombre</th>
                                 <th className="table-header-cell">Terminal</th>
                                 <th className="table-header-cell">Fecha</th>
-                                <th className="table-header-cell">Estado</th>
+                                <th className="table-header-cell">Jornada Prog.</th>
+                                <th className="table-header-cell">Jornada Reprog.</th>
+                                <th className="table-header-cell">Doc</th>
                                 <th className="table-header-cell">Autorización</th>
                                 <th className="table-header-cell text-right">Acciones</th>
                             </tr>
@@ -163,7 +175,15 @@ export const NoMarcacionesPage = () => {
                                     <td className="table-cell font-medium">{row.nombre}</td>
                                     <td className="table-cell">{displayTerminal(row.terminal_code)}</td>
                                     <td className="table-cell">{row.date}</td>
-                                    <td className="table-cell">{row.incident_state || '-'}</td>
+                                    <td className="table-cell text-xs">{row.prog_start} - {row.prog_end}</td>
+                                    <td className="table-cell text-xs">{row.reprogram_start} - {row.reprogram_end}</td>
+                                    <td className="table-cell">
+                                        {row.document_path ? (
+                                            <button onClick={() => handleViewDocument(row.document_path!)} className="text-brand-600 hover:underline">
+                                                <Icon name="image" size={16} />
+                                            </button>
+                                        ) : '-'}
+                                    </td>
                                     <td className="table-cell">{getStatusBadge(row.auth_status)}</td>
                                     <td className="table-cell">
                                         <div className="flex items-center justify-end gap-1">
@@ -191,18 +211,16 @@ export const NoMarcacionesPage = () => {
                 </div>
             )}
 
-            {/* Modals */}
             {(modal.type === 'create' || modal.type === 'edit') && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setModal({ type: 'none' })} />
-                    <div className="relative w-full max-w-3xl card p-6 max-h-[90vh] overflow-y-auto animate-scale-in">
+                    <div className="relative w-full max-w-4xl card p-6 max-h-[90vh] overflow-y-auto animate-scale-in">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-xl font-bold">{modal.type === 'create' ? 'Nuevo Registro' : 'Editar Registro'}</h3>
                             <button onClick={() => setModal({ type: 'none' })} className="text-slate-400 hover:text-slate-600"><Icon name="x" size={24} /></button>
                         </div>
-                        <NoMarcacionesForm
-                            initialData={modal.type === 'edit' ? { ...modal.record, area: modal.record.area ?? 'Logística', cargo: modal.record.cargo ?? '', jefe_terminal: modal.record.jefe_terminal ?? '', cabezal: modal.record.cabezal ?? '', incident_state: modal.record.incident_state ?? '', schedule_in_out: modal.record.schedule_in_out ?? '', time_range: modal.record.time_range ?? '', observations: modal.record.observations ?? '', informed_by: modal.record.informed_by ?? supervisorName } : undefined}
-                            supervisorName={supervisorName}
+                        <CambiosDeDiaForm
+                            initialData={modal.type === 'edit' ? { ...modal.record, cabezal: modal.record.cabezal ?? '', prog_start: modal.record.prog_start ?? '', prog_end: modal.record.prog_end ?? '', reprogram_start: modal.record.reprogram_start ?? '', reprogram_end: modal.record.reprogram_end ?? '', day_off_date: modal.record.day_off_date ?? '', day_off_start: modal.record.day_off_start ?? '', day_off_end: modal.record.day_off_end ?? '', day_on_date: modal.record.day_on_date ?? '', day_on_start: modal.record.day_on_start ?? '', day_on_end: modal.record.day_on_end ?? '', document: null } : undefined}
                             onSubmit={modal.type === 'create' ? handleCreate : handleUpdate}
                             onCancel={() => setModal({ type: 'none' })}
                             isLoading={createMutation.isPending || updateMutation.isPending}
