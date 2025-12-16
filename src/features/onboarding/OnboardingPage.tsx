@@ -81,11 +81,11 @@ export const OnboardingPage = () => {
                 <Icon
                   name="users"
                   size={18}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                 />
                 <input
                   type="text"
-                  className="input pl-11"
+                  className="input pl-10"
                   value={supervisorName}
                   onChange={(e) => setSupervisorName(e.target.value)}
                   placeholder="Ej: Ana Pérez"
@@ -101,10 +101,10 @@ export const OnboardingPage = () => {
                 <Icon
                   name="building"
                   size={18}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-10"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10"
                 />
                 <select
-                  className="input pl-11 appearance-none cursor-pointer"
+                  className="input pl-10 appearance-none cursor-pointer"
                   value={terminalCode}
                   onChange={(e) => setTerminalCode(e.target.value as TerminalCode)}
                   style={{
