@@ -616,6 +616,7 @@ export const subscribeToAttendanceChanges = (
 
 import { emailService } from '../../shared/services/emailService';
 import { displayTerminal } from '../../shared/utils/terminal';
+import { fetchAppConfig, EmailConfig } from '../settings/api';
 
 const EMAIL_RECIPIENT = 'isaac.avila@transdev.cl';
 
@@ -725,10 +726,15 @@ export const sendAuthorizationEmail = async (
         </table>
     `.trim();
 
+    const config = await fetchAppConfig<EmailConfig>('email_notifications');
+    const recipients = config?.to && config.to.length > 0 ? config.to : [EMAIL_RECIPIENT];
+    const ccRecipients = config?.cc || [];
+
     try {
         await emailService.sendEmail({
             audience: 'manual',
-            manualRecipients: [EMAIL_RECIPIENT],
+            manualRecipients: recipients,
+            cc: ccRecipients,
             subject,
             body,
         });
@@ -816,10 +822,15 @@ export const sendRecordCreatedEmail = async (
         </table>
     `.trim();
 
+    const config = await fetchAppConfig<EmailConfig>('email_notifications');
+    const recipients = config?.to && config.to.length > 0 ? config.to : [EMAIL_RECIPIENT];
+    const ccRecipients = config?.cc || [];
+
     try {
         await emailService.sendEmail({
             audience: 'manual',
-            manualRecipients: [EMAIL_RECIPIENT],
+            manualRecipients: recipients,
+            cc: ccRecipients,
             subject,
             body,
         });

@@ -34,7 +34,7 @@ serve(async (req: Request) => {
     return new Response('Invalid JSON', { status: 400, headers: corsHeaders });
   }
 
-  const { subject, body, audience, terminalCodes, manualRecipients } = payload ?? {};
+  const { subject, body, audience, terminalCodes, manualRecipients, cc } = payload ?? {};
 
   if (!subject || !body || !audience) {
     return new Response('Missing required fields', { status: 400, headers: corsHeaders });
@@ -69,6 +69,7 @@ serve(async (req: Request) => {
     body: JSON.stringify({
       from: fromAddress,
       to,
+      cc,
       subject,
       html,
     }),

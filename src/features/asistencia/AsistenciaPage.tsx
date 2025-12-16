@@ -13,8 +13,11 @@ const TABS: { id: AttendanceSubsection; label: string; icon: IconName }[] = [
   { id: 'autorizaciones', label: 'Autorizaciones', icon: 'check-circle' },
 ];
 
+import { EmailConfigModal } from '../settings/components/EmailConfigModal';
+
 export const AsistenciaPage = () => {
   const [activeTab, setActiveTab] = useState<AttendanceSubsection>('no-marcaciones');
+  const [isConfigOpen, setIsConfigOpen] = useState(false);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -33,25 +36,37 @@ export const AsistenciaPage = () => {
 
   return (
     <div className="space-y-6">
-      {/* Tabs */}
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-4">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${activeTab === tab.id
+      {/* Tabs & Config */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+        <div className="flex flex-wrap gap-2">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${activeTab === tab.id
                 ? 'bg-brand-600 text-white shadow-md'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-          >
-            <Icon name={tab.icon} size={18} />
-            <span className="hidden sm:inline">{tab.label}</span>
-          </button>
-        ))}
+                }`}
+            >
+              <Icon name={tab.icon} size={18} />
+              <span className="hidden sm:inline">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => setIsConfigOpen(true)}
+          className="btn btn-secondary text-sm flex items-center gap-2 shrink-0"
+        >
+          <Icon name="settings" size={16} />
+          <span>Configurar Correos</span>
+        </button>
       </div>
 
       {/* Content */}
       {renderContent()}
+
+      <EmailConfigModal isOpen={isConfigOpen} onClose={() => setIsConfigOpen(false)} />
     </div>
   );
 };

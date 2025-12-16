@@ -6,6 +6,7 @@ export interface EmailPayload {
   audience: EmailAudience;
   terminalCodes?: TerminalCode[];
   manualRecipients?: string[];
+  cc?: string[];
   subject: string;
   body: string;
 }
