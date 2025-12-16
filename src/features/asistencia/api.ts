@@ -504,8 +504,22 @@ export const subscribeToAttendanceChanges = (
 // ==========================================
 
 import { emailService } from '../../shared/services/emailService';
+import { displayTerminal } from '../../shared/utils/terminal';
 
 const EMAIL_RECIPIENT = 'isaac.avila@transdev.cl';
+
+const formatDate = (date: string) => {
+    const d = new Date(date + 'T12:00:00');
+    return d.toLocaleDateString('es-CL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+};
+
+const generateDataRow = (label: string, value: string, highlight = false) => `
+    <tr>
+        <td style="padding: 14px 16px; background: #f8fafc; border-radius: 8px 0 0 8px; font-size: 13px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; width: 140px;">${label}</td>
+        <td style="padding: 14px 16px; background: #f8fafc; border-radius: 0 8px 8px 0; font-size: 15px; font-weight: ${highlight ? '700' : '500'}; color: ${highlight ? '#1e40af' : '#1e293b'};">${value}</td>
+    </tr>
+    <tr><td colspan="2" style="height: 8px;"></td></tr>
+`;
 
 export const sendAuthorizationEmail = async (
     type: 'AUTORIZADO' | 'RECHAZADO',
@@ -516,17 +530,29 @@ export const sendAuthorizationEmail = async (
     date: string,
     reason?: string
 ): Promise<void> => {
-    const subject = `[Asistencia] ${type}: ${subsection} - ${nombre}`;
+    const isApproved = type === 'AUTORIZADO';
+    const statusColor = isApproved ? '#16a34a' : '#dc2626';
+    const statusBg = isApproved ? 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)' : 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)';
+    const statusBorder = isApproved ? '#86efac' : '#fca5a5';
+
+    const subject = `${isApproved ? '✓' : '✗'} ${subsection} ${type} - ${nombre}`;
     const body = `
-<h2 style="color: ${type === 'AUTORIZADO' ? '#16a34a' : '#dc2626'};">Registro ${type}</h2>
-<table style="border-collapse: collapse; width: 100%; max-width: 500px;">
-  <tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><strong>Subsección:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${subsection}</td></tr>
-  <tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><strong>RUT:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${rut}</td></tr>
-  <tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><strong>Nombre:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${nombre}</td></tr>
-  <tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><strong>Terminal:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${terminal}</td></tr>
-  <tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><strong>Fecha:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${date}</td></tr>
-  ${reason ? `<tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><strong>Motivo:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0; color: #dc2626;">${reason}</td></tr>` : ''}
-</table>
+        <div style="margin-bottom: 24px;">
+            <div style="background: ${statusBg}; border: 2px solid ${statusBorder}; border-radius: 16px; padding: 24px; text-align: center; margin-bottom: 24px;">
+                <div style="font-size: 48px; margin-bottom: 8px;">${isApproved ? '✓' : '✗'}</div>
+                <div style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px;">Estado</div>
+                <div style="font-size: 24px; font-weight: 800; color: ${statusColor};">${type}</div>
+            </div>
+            
+            <table style="width: 100%; border-collapse: separate; border-spacing: 0;">
+                ${generateDataRow('Subsección', subsection, true)}
+                ${generateDataRow('RUT', rut)}
+                ${generateDataRow('Trabajador', nombre)}
+                ${generateDataRow('Terminal', displayTerminal(terminal as any))}
+                ${generateDataRow('Fecha', formatDate(date))}
+                ${reason ? generateDataRow('Motivo Rechazo', reason, true) : ''}
+            </table>
+        </div>
     `.trim();
 
     try {
@@ -554,34 +580,46 @@ export const sendRecordCreatedEmail = async (
 ): Promise<void> => {
     const detailsRows = data.details
         ? Object.entries(data.details)
-            .filter(([_, v]) => v)
-            .map(([k, v]) => `<tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><strong>${k}:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${v}</td></tr>`)
+            .filter(([_, v]) => v && v.trim())
+            .map(([k, v]) => generateDataRow(k, v))
             .join('')
         : '';
 
-    const subject = `[Asistencia] Nuevo Registro: ${subsection} - ${data.nombre}`;
+    const subject = `Nuevo Registro: ${subsection} - ${data.nombre}`;
     const body = `
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-  <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 20px; border-radius: 8px 8px 0 0;">
-    <h2 style="color: white; margin: 0;">Nuevo Registro de Asistencia</h2>
-    <p style="color: #bfdbfe; margin: 8px 0 0 0;">${subsection}</p>
-  </div>
-  <div style="background: #f8fafc; padding: 20px; border-radius: 0 0 8px 8px; border: 1px solid #e2e8f0; border-top: none;">
-    <table style="width: 100%; border-collapse: collapse;">
-      <tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><strong>RUT:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-family: monospace;">${data.rut}</td></tr>
-      <tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><strong>Nombre:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${data.nombre}</td></tr>
-      <tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><strong>Terminal:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${data.terminal}</td></tr>
-      <tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><strong>Fecha:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${data.date}</td></tr>
-      ${detailsRows}
-    </table>
-    <div style="margin-top: 16px; padding: 12px; background: #dbeafe; border-radius: 6px;">
-      <p style="margin: 0; font-size: 14px; color: #1e40af;">
-        <strong>Registrado por:</strong> ${data.createdBy}<br/>
-        <strong>Estado:</strong> <span style="color: #f59e0b; font-weight: bold;">PENDIENTE DE AUTORIZACIÓN</span>
-      </p>
-    </div>
-  </div>
-</div>
+        <div style="margin-bottom: 24px;">
+            <!-- Status Banner -->
+            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #fbbf24; border-radius: 16px; padding: 20px; text-align: center; margin-bottom: 24px;">
+                <div style="font-size: 36px; margin-bottom: 8px;">⏳</div>
+                <div style="font-size: 11px; font-weight: 700; color: #92400e; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px;">Estado Actual</div>
+                <div style="font-size: 20px; font-weight: 800; color: #78350f;">PENDIENTE DE AUTORIZACIÓN</div>
+            </div>
+            
+            <!-- Badge -->
+            <div style="text-align: center; margin-bottom: 24px;">
+                <span style="display: inline-block; padding: 8px 20px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 50px; color: white; font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">${subsection}</span>
+            </div>
+            
+            <!-- Main Data -->
+            <table style="width: 100%; border-collapse: separate; border-spacing: 0;">
+                ${generateDataRow('RUT', data.rut)}
+                ${generateDataRow('Trabajador', data.nombre, true)}
+                ${generateDataRow('Terminal', displayTerminal(data.terminal as any))}
+                ${generateDataRow('Fecha', formatDate(data.date))}
+                ${detailsRows}
+            </table>
+            
+            <!-- Registrado Por -->
+            <div style="margin-top: 24px; padding: 20px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 12px; border: 1px solid #93c5fd;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 44px; height: 44px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 18px;">${data.createdBy.charAt(0)}</div>
+                    <div>
+                        <div style="font-size: 12px; color: #3b82f6; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Registrado por</div>
+                        <div style="font-size: 16px; font-weight: 700; color: #1e40af;">${data.createdBy}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     `.trim();
 
     try {
@@ -595,3 +633,4 @@ export const sendRecordCreatedEmail = async (
         console.error('Error sending record created email:', err);
     }
 };
+
