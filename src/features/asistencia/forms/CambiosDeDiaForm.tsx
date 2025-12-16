@@ -39,13 +39,20 @@ export const CambiosDeDiaForm = ({ initialData, onSubmit, onCancel, isLoading }:
         if (staff) {
             // Parse horario "08:00-18:00" to get start and end
             const [startTime, endTime] = (staff.horario || '').split('-');
+            const trimmedStart = startTime?.trim() || '';
+            const trimmedEnd = endTime?.trim() || '';
 
             setForm((prev) => ({
                 ...prev,
                 nombre: staff.nombre,
                 terminal_code: staff.terminal_code as TerminalCode,
-                prog_start: startTime?.trim() || '',
-                prog_end: endTime?.trim() || '',
+                prog_start: trimmedStart,
+                prog_end: trimmedEnd,
+                // Auto-fill day_off and day_on times with same schedule
+                day_off_start: trimmedStart,
+                day_off_end: trimmedEnd,
+                day_on_start: trimmedStart,
+                day_on_end: trimmedEnd,
             }));
         }
     };
@@ -97,15 +104,15 @@ export const CambiosDeDiaForm = ({ initialData, onSubmit, onCancel, isLoading }:
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label className="label">Entrada</label>
-                        <input type="text" className="input bg-brand-100" value={form.prog_start}
+                        <input type="text" className="input bg-brand-100 font-medium" value={form.prog_start}
                             onChange={(e) => setForm((prev) => ({ ...prev, prog_start: e.target.value }))}
-                            placeholder="--:--" />
+                            placeholder="--:--" readOnly />
                     </div>
                     <div>
                         <label className="label">Salida</label>
-                        <input type="text" className="input bg-brand-100" value={form.prog_end}
+                        <input type="text" className="input bg-brand-100 font-medium" value={form.prog_end}
                             onChange={(e) => setForm((prev) => ({ ...prev, prog_end: e.target.value }))}
-                            placeholder="--:--" />
+                            placeholder="--:--" readOnly />
                     </div>
                 </div>
             </div>
@@ -121,13 +128,13 @@ export const CambiosDeDiaForm = ({ initialData, onSubmit, onCancel, isLoading }:
                     </div>
                     <div>
                         <label className="label">Inicio</label>
-                        <input type="text" className="input" value={form.day_off_start}
+                        <input type="text" className="input font-medium" value={form.day_off_start}
                             onChange={(e) => setForm((prev) => ({ ...prev, day_off_start: e.target.value }))}
                             placeholder="--:--" />
                     </div>
                     <div>
                         <label className="label">Término</label>
-                        <input type="text" className="input" value={form.day_off_end}
+                        <input type="text" className="input font-medium" value={form.day_off_end}
                             onChange={(e) => setForm((prev) => ({ ...prev, day_off_end: e.target.value }))}
                             placeholder="--:--" />
                     </div>
@@ -145,13 +152,13 @@ export const CambiosDeDiaForm = ({ initialData, onSubmit, onCancel, isLoading }:
                     </div>
                     <div>
                         <label className="label">Inicio</label>
-                        <input type="text" className="input" value={form.day_on_start}
+                        <input type="text" className="input font-medium" value={form.day_on_start}
                             onChange={(e) => setForm((prev) => ({ ...prev, day_on_start: e.target.value }))}
                             placeholder="--:--" />
                     </div>
                     <div>
                         <label className="label">Término</label>
-                        <input type="text" className="input" value={form.day_on_end}
+                        <input type="text" className="input font-medium" value={form.day_on_end}
                             onChange={(e) => setForm((prev) => ({ ...prev, day_on_end: e.target.value }))}
                             placeholder="--:--" />
                     </div>
