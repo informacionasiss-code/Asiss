@@ -503,6 +503,8 @@ export const subscribeToAttendanceChanges = (
 // EMAIL NOTIFICATION
 // ==========================================
 
+import { emailService } from '../../shared/services/emailService';
+
 const EMAIL_RECIPIENT = 'isaac.avila@transdev.cl';
 
 export const sendAuthorizationEmail = async (
@@ -514,12 +516,6 @@ export const sendAuthorizationEmail = async (
     date: string,
     reason?: string
 ): Promise<void> => {
-    const emailApiUrl = import.meta.env.VITE_EMAIL_API_URL;
-    if (!emailApiUrl) {
-        console.warn('Email API URL not configured');
-        return;
-    }
-
     const subject = `[Asistencia] ${type}: ${subsection} - ${nombre}`;
     const body = `
 <h2 style="color: ${type === 'AUTORIZADO' ? '#16a34a' : '#dc2626'};">Registro ${type}</h2>
@@ -534,18 +530,14 @@ export const sendAuthorizationEmail = async (
     `.trim();
 
     try {
-        await fetch(emailApiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                subject,
-                body,
-                to: [EMAIL_RECIPIENT],
-                audience: 'internal'
-            }),
+        await emailService.sendEmail({
+            audience: 'manual',
+            manualRecipients: [EMAIL_RECIPIENT],
+            subject,
+            body,
         });
     } catch (err) {
-        console.error('Error sending email:', err);
+        console.error('Error sending authorization email:', err);
     }
 };
 
@@ -560,12 +552,6 @@ export const sendRecordCreatedEmail = async (
         details?: Record<string, string>;
     }
 ): Promise<void> => {
-    const emailApiUrl = import.meta.env.VITE_EMAIL_API_URL;
-    if (!emailApiUrl) {
-        console.warn('Email API URL not configured');
-        return;
-    }
-
     const detailsRows = data.details
         ? Object.entries(data.details)
             .filter(([_, v]) => v)
@@ -599,18 +585,13 @@ export const sendRecordCreatedEmail = async (
     `.trim();
 
     try {
-        await fetch(emailApiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                subject,
-                body,
-                to: [EMAIL_RECIPIENT],
-                audience: 'internal'
-            }),
+        await emailService.sendEmail({
+            audience: 'manual',
+            manualRecipients: [EMAIL_RECIPIENT],
+            subject,
+            body,
         });
     } catch (err) {
         console.error('Error sending record created email:', err);
     }
 };
-
