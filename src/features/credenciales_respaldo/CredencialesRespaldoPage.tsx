@@ -225,7 +225,7 @@ export const CredencialesRespaldoPage = () => {
                 dias: daysPassed,
                 estado: loan.status,
                 descuento: loan.discount_applied ? loan.discount_amount : 0,
-                correo_trabajador: loan.worker_email || '',
+                correo_trabajador: loan.boss_email || '',
                 creado_por: loan.created_by_supervisor,
             };
         });
@@ -462,7 +462,7 @@ export const CredencialesRespaldoPage = () => {
                 managerEmail={emailSettingsQuery.data?.find(
                     (s) => s.scope_code === pendingEmailLoan?.person_terminal || s.scope_type === 'GLOBAL'
                 )?.manager_email || ''}
-                workerEmail={pendingEmailLoan?.worker_email || ''}
+                workerEmail={pendingEmailLoan?.boss_email || ''}
                 cc={emailSettingsQuery.data?.find(
                     (s) => s.scope_code === pendingEmailLoan?.person_terminal || s.scope_type === 'GLOBAL'
                 )?.cc_emails || undefined}

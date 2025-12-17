@@ -125,7 +125,7 @@ export const createLoan = async (values: LoanFormValues): Promise<BackupLoan> =>
             person_turno: values.person_turno || null,
             person_horario: values.person_horario || null,
             person_contacto: values.person_contacto || null,
-            worker_email: values.worker_email || null,
+            boss_email: values.worker_email || null,
             reason: values.reason,
             requested_at: values.requested_at,
             discount_amount: values.discount_amount,
@@ -636,11 +636,11 @@ export const sendBackupEmails = async (
             </table>
         `.trim();
 
-        // Only send worker notification if worker_email exists
-        if (loan.worker_email) {
+        // Only send worker notification if boss_email (worker email) exists
+        if (loan.boss_email) {
             await emailService.sendEmail({
                 audience: 'manual',
-                manualRecipients: [loan.worker_email],
+                manualRecipients: [loan.boss_email],
                 subject: bossSubject,
                 body: bossBody,
                 // NO attachment for worker notification - only manager gets the discount form

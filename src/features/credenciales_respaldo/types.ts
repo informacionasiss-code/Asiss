@@ -31,7 +31,7 @@ export interface BackupLoan {
     person_turno?: string | null;
     person_horario?: string | null;
     person_contacto?: string | null;
-    worker_email?: string | null;
+    boss_email?: string | null;  // Database column (used for worker notification email)
     reason: BackupReason;
     requested_at: string;
     issued_at: string;

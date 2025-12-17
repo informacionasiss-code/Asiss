@@ -194,7 +194,7 @@ export const LoanDetailModal = ({ isOpen, loan, onClose }: Props) => {
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-sm text-slate-500">Correo Trabajador:</span>
-                                    <span className="text-sm text-slate-900">{loan.worker_email || '-'}</span>
+                                    <span className="text-sm text-slate-900">{loan.boss_email || '-'}</span>
                                 </div>
                                 {loan.emails_sent_at && (
                                     <div className="flex justify-between">
