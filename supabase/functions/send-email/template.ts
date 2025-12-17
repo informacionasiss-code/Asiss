@@ -82,14 +82,12 @@ export const renderEmailTemplate = ({
     timeStyle: 'short'
   });
 
-  // Module-based configuration
-  const moduleConfig = {
-    asistencia: { name: 'Sistema Asistencia', button: 'Ir al Panel de Asistencia', color: '#2563eb' },
-    credenciales: { name: 'Gestión Credenciales', button: 'Ir a Credenciales', color: '#7c3aed' },
-    informativos: { name: 'Informativos', button: 'Ir a Informativos', color: '#0891b2' },
-    minicheck: { name: 'MiniCheck', button: 'Ir a MiniCheck', color: '#059669' },
+  // All emails use the same sender name - subject contains the specific context
+  const config = {
+    name: 'Asiss US EL ROBLE',
+    button: 'Ir al Panel',
+    color: '#2563eb'
   };
-  const config = moduleConfig[module] || moduleConfig.asistencia;
 
   return `<!DOCTYPE html>
 <html lang="es">
