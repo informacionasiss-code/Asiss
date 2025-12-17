@@ -16,6 +16,7 @@ import { RecoverModal } from './components/RecoverModal';
 import { CancelModal } from './components/CancelModal';
 import { CardsInventoryModal } from './components/CardsInventoryModal';
 import { EmailSettingsModal } from './components/EmailSettingsModal';
+import { SignedDocumentModal } from './components/SignedDocumentModal';
 import {
     fetchLoans,
     fetchKpis,
@@ -24,6 +25,7 @@ import {
     recoverLoan,
     cancelLoan,
     sendBackupEmails,
+    EmailAttachment,
 } from './api/backupApi';
 import {
     BackupLoan,
@@ -56,6 +58,9 @@ export const CredencialesRespaldoPage = () => {
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [showRecoverModal, setShowRecoverModal] = useState(false);
     const [showCancelModal, setShowCancelModal] = useState(false);
+    const [showSignedDocModal, setShowSignedDocModal] = useState(false);
+    const [pendingEmailLoan, setPendingEmailLoan] = useState<BackupLoan | null>(null);
+    const [emailSendLoading, setEmailSendLoading] = useState(false);
 
     // Queries
     const loansQuery = useQuery({
@@ -77,22 +82,19 @@ export const CredencialesRespaldoPage = () => {
     const createLoanMutation = useMutation({
         mutationFn: async (values: LoanFormValues) => {
             const loan = await createLoan(values);
-            // Send emails if enabled
-            if (values.send_emails) {
-                const settings = emailSettingsQuery.data?.find(
-                    (s) => s.scope_code === values.person_terminal || s.scope_type === 'GLOBAL'
-                );
-                if (settings) {
-                    await sendBackupEmails(loan, settings.manager_email, settings.cc_emails || undefined);
-                }
-            }
-            return loan;
+            return { loan, sendEmails: values.send_emails };
         },
-        onSuccess: () => {
+        onSuccess: ({ loan, sendEmails }) => {
             queryClient.invalidateQueries({ queryKey: ['backup-loans'] });
             queryClient.invalidateQueries({ queryKey: ['backup-kpis'] });
             queryClient.invalidateQueries({ queryKey: ['backup-cards'] });
             setShowNewLoanModal(false);
+
+            // If emails should be sent, open the signed document modal
+            if (sendEmails) {
+                setPendingEmailLoan(loan);
+                setShowSignedDocModal(true);
+            }
         },
     });
 
@@ -164,20 +166,44 @@ export const CredencialesRespaldoPage = () => {
         setShowCancelModal(true);
     };
 
-    const handleResendEmails = async (loan: BackupLoan) => {
+    const handleResendEmails = (loan: BackupLoan) => {
+        // Open signed document modal for resending
+        setPendingEmailLoan(loan);
+        setShowSignedDocModal(true);
+    };
+
+    const handleSendEmailWithAttachment = async (attachment: EmailAttachment | null) => {
+        if (!pendingEmailLoan) return;
+
         const settings = emailSettingsQuery.data?.find(
-            (s) => s.scope_code === loan.person_terminal || s.scope_type === 'GLOBAL'
+            (s) => s.scope_code === pendingEmailLoan.person_terminal || s.scope_type === 'GLOBAL'
         );
-        if (settings) {
-            const result = await sendBackupEmails(loan, settings.manager_email, settings.cc_emails || undefined);
-            if (result.success) {
-                alert('Correos enviados correctamente');
-            } else {
-                alert('Error al enviar correos: ' + (result.error || 'Error desconocido'));
-            }
-        } else {
+
+        if (!settings) {
             alert('Configure los correos primero en el boton "Correos"');
+            setShowSignedDocModal(false);
+            setPendingEmailLoan(null);
+            return;
         }
+
+        setEmailSendLoading(true);
+        const result = await sendBackupEmails(
+            pendingEmailLoan,
+            settings.manager_email,
+            settings.cc_emails || undefined,
+            attachment
+        );
+        setEmailSendLoading(false);
+
+        if (result.success) {
+            alert('Correos enviados correctamente');
+            queryClient.invalidateQueries({ queryKey: ['backup-loans'] });
+        } else {
+            alert('Error al enviar correos: ' + (result.error || 'Error desconocido'));
+        }
+
+        setShowSignedDocModal(false);
+        setPendingEmailLoan(null);
     };
 
     const handleExport = () => {
@@ -423,6 +449,24 @@ export const CredencialesRespaldoPage = () => {
             <EmailSettingsModal
                 isOpen={showEmailSettingsModal}
                 onClose={() => setShowEmailSettingsModal(false)}
+            />
+
+            <SignedDocumentModal
+                isOpen={showSignedDocModal}
+                loan={pendingEmailLoan}
+                managerEmail={emailSettingsQuery.data?.find(
+                    (s) => s.scope_code === pendingEmailLoan?.person_terminal || s.scope_type === 'GLOBAL'
+                )?.manager_email || ''}
+                bossEmail={pendingEmailLoan?.boss_email || ''}
+                cc={emailSettingsQuery.data?.find(
+                    (s) => s.scope_code === pendingEmailLoan?.person_terminal || s.scope_type === 'GLOBAL'
+                )?.cc_emails || undefined}
+                onClose={() => {
+                    setShowSignedDocModal(false);
+                    setPendingEmailLoan(null);
+                }}
+                onSubmit={handleSendEmailWithAttachment}
+                isLoading={emailSendLoading}
             />
         </div>
     );

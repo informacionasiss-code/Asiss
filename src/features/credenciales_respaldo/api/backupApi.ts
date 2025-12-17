@@ -366,10 +366,16 @@ export const fetchKpis = async (): Promise<BackupKpis> => {
 // EMAIL SENDING (uses Supabase Edge Functions)
 // ============================================
 
+export interface EmailAttachment {
+    filename: string;
+    content: string; // base64
+}
+
 export const sendBackupEmails = async (
     loan: BackupLoan,
     managerEmail: string,
-    cc?: string
+    cc?: string,
+    attachment?: EmailAttachment | null
 ): Promise<{ success: boolean; error?: string }> => {
     const cardNumber = loan.backup_cards?.card_number || 'N/A';
     const terminalName = loan.person_terminal;
@@ -377,6 +383,9 @@ export const sendBackupEmails = async (
     const fechaEntrega = new Date(loan.issued_at).toLocaleDateString('es-CL', {
         year: 'numeric', month: 'long', day: 'numeric'
     });
+
+    // Prepare attachments array if provided
+    const attachments = attachment ? [attachment] : undefined;
 
     try {
         // EMAIL 1: To manager (person who creates the new credential)
@@ -396,20 +405,23 @@ Fecha de solicitud: ${loan.requested_at}
 Supervisor que entrego: ${loan.created_by_supervisor}
 
 Por favor proceder con la emision de una nueva credencial para este trabajador.
+${attachment ? '\n[ADJUNTO: Autorizacion de descuento firmada]' : ''}
 `.trim();
 
-        const { error: managerError } = await supabase.functions.invoke('send-email', {
+        const { data: managerData, error: managerError } = await supabase.functions.invoke('send-email', {
             body: {
                 subject: managerSubject,
                 body: managerBody,
                 audience: 'manual',
                 manualRecipients: [managerEmail],
                 cc: cc ? cc.split(',').map((e) => e.trim()).filter(Boolean) : undefined,
+                attachments,
             },
         });
 
         if (managerError) {
             console.error('Error sending manager email:', managerError);
+            return { success: false, error: `Error al enviar correo al gestor: ${managerError.message}` };
         }
 
         // EMAIL 2: To boss (notification about backup card)
@@ -432,22 +444,25 @@ INFORMACION DEL RESPALDO:
 ${loan.discount_applied ? `- Descuento aplicado: $${loan.discount_amount.toLocaleString('es-CL')} (1 cuota)` : ''}
 
 Una vez que el trabajador reciba su nueva credencial, debera devolver la tarjeta de respaldo.
+${attachment ? '\n[ADJUNTO: Autorizacion de descuento firmada]' : ''}
 
 Saludos cordiales,
 Gestion de Personal
 `.trim();
 
-        const { error: bossError } = await supabase.functions.invoke('send-email', {
+        const { data: bossData, error: bossError } = await supabase.functions.invoke('send-email', {
             body: {
                 subject: bossSubject,
                 body: bossBody,
                 audience: 'manual',
                 manualRecipients: [loan.boss_email],
+                attachments,
             },
         });
 
         if (bossError) {
             console.error('Error sending boss email:', bossError);
+            return { success: false, error: `Error al enviar correo a jefatura: ${bossError.message}` };
         }
 
         // Mark emails as sent
@@ -462,4 +477,3 @@ Gestion de Personal
         };
     }
 };
-

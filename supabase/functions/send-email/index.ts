@@ -33,7 +33,7 @@ Deno.serve(async (req: Request) => {
     return new Response('Invalid JSON', { status: 400, headers: corsHeaders });
   }
 
-  const { subject, body, audience, terminalCodes, manualRecipients, cc } = payload ?? {};
+  const { subject, body, audience, terminalCodes, manualRecipients, cc, attachments } = payload ?? {};
 
   if (!subject || !body || !audience) {
     return new Response('Missing required fields', { status: 400, headers: corsHeaders });
@@ -59,19 +59,30 @@ Deno.serve(async (req: Request) => {
     brandUrl,
   });
 
+  // Build email payload for Resend
+  const emailPayload: any = {
+    from: fromAddress,
+    to,
+    cc,
+    subject,
+    html,
+  };
+
+  // Add attachments if provided (array of { filename, content (base64) })
+  if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+    emailPayload.attachments = attachments.map((att: { filename: string; content: string }) => ({
+      filename: att.filename,
+      content: att.content, // base64 encoded
+    }));
+  }
+
   const resendResponse = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      from: fromAddress,
-      to,
-      cc,
-      subject,
-      html,
-    }),
+    body: JSON.stringify(emailPayload),
   });
 
   const result = await resendResponse.json();
@@ -86,3 +97,4 @@ Deno.serve(async (req: Request) => {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 });
+
