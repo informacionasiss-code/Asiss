@@ -88,111 +88,135 @@ export const LoanFormModal = ({ isOpen, onClose, onSubmit, isLoading, supervisor
     };
 
     const handlePrint = () => {
-        if (printRef.current) {
-            const printWindow = window.open('', '_blank');
-            if (printWindow) {
-                const terminalName = terminalOptions.find(t => t.value === form.person_terminal)?.label || form.person_terminal;
-                printWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>Autorizacion de Descuento</title>
-            <style>
-              @page { size: letter; margin: 1.5cm; }
-              body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; max-width: 700px; margin: 0 auto; }
-              .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #c00; padding-bottom: 10px; margin-bottom: 20px; }
-              .logo { font-size: 24px; font-weight: bold; color: #c00; }
-              .title-bar { background: #c00; color: white; padding: 8px 15px; font-weight: bold; text-align: center; margin-bottom: 20px; }
-              .field-row { display: flex; margin-bottom: 10px; }
-              .field-label { font-weight: bold; min-width: 180px; }
-              .field-value { border-bottom: 1px solid #333; flex: 1; padding-left: 10px; }
-              .authorization-box { border: 2px solid #333; padding: 15px; margin: 20px 0; text-align: center; }
-              .amount { font-size: 18px; font-weight: bold; }
-              .signature-section { margin-top: 40px; border-top: 2px solid #333; padding-top: 15px; }
-              .signature-line { border-bottom: 1px solid #333; height: 60px; margin: 30px 0 5px 0; }
-              .observations-box { border: 1px solid #333; min-height: 80px; margin: 15px 0; }
-              .observations-header { background: #666; color: white; padding: 5px 10px; font-weight: bold; text-align: center; }
-              .footer { margin-top: 30px; text-align: center; font-size: 10px; border-top: 1px solid #333; padding-top: 10px; }
-              .detail-section { margin-top: 20px; border-top: 2px solid #333; padding-top: 15px; }
-              .detail-title { font-weight: bold; font-style: italic; margin-bottom: 10px; }
-              .detail-table { width: 100%; border-collapse: collapse; }
-              .detail-table th, .detail-table td { border: 1px solid #333; padding: 5px 10px; }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <div class="logo">RBU</div>
-              <div style="text-align: right; color: #c00; font-weight: bold;">RBU Santiago.</div>
-            </div>
-            
-            <div class="title-bar">Autorizacion de Descuento</div>
-            
-            <div class="field-row">
-              <span class="field-label">NOMBRE DEL TRABAJADOR:</span>
-              <span class="field-value">${form.person_name || ''}</span>
-            </div>
-            
-            <div class="field-row">
-              <span class="field-label">RUT:</span>
-              <span class="field-value" style="max-width: 150px;">${form.person_rut || ''}</span>
-              <span class="field-label" style="margin-left: 20px;">Cargo desempenado:</span>
-              <span class="field-value">${form.person_cargo || ''}</span>
-            </div>
-            
-            <div class="authorization-box">
-              <p style="font-weight: bold;">EL TRABAJADOR INDIVIDUALIZADO AUTORIZA EN ESTE ACTO</p>
-              <p class="amount">EL DESCUENTO DE: $ ${form.discount_amount.toLocaleString('es-CL')}</p>
-              <p style="font-weight: bold;">POR CONCEPTO DE: ${form.reason === 'PERDIDA' ? 'Perdida Credencial' : 'Deterioro Credencial'}</p>
-              
-              <div style="display: flex; justify-content: flex-end; gap: 20px; margin-top: 15px;">
-                <div style="text-align: right;">
-                  <p>A descontar en: <strong>1 Cuotas</strong></p>
-                  <p>A contar de: <strong>Mes en curso</strong></p>
-                  <p>Valor de cada cuota: <strong>$ ${form.discount_amount.toLocaleString('es-CL')}</strong></p>
-                </div>
-              </div>
-            </div>
-            
-            <div class="signature-section">
-              <p style="font-weight: bold; font-style: italic;">Firma y Rut del trabajador</p>
-              <p style="float: right;">Fecha: <strong>${new Date().toLocaleDateString('es-CL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong></p>
-              <div style="clear: both;"></div>
-              <p style="font-size: 10px; margin-top: 10px;">
-                El trabajador, mediante el presente instrumento, otorga mandato expreso a REDBUS URBANO S.A. para que descuente de sus remuneraciones en las cuotas y plazos indicados la suma indicada en este acto. Asimismo faculta expresamente a REDBUS URBANO S.A., para que en el evento de que por cualquier causa se pusiese termino al contrato de trabajo, descuente el total del saldo adeudado de las indemnizaciones a que tenga derecho y/o otros emolumentos que pudiere tener derecho al termino de la relacion laboral.
-              </p>
-              <div class="signature-line"></div>
-            </div>
-            
-            <div class="observations-box">
-              <div class="observations-header">Observaciones</div>
-              <div style="min-height: 60px; padding: 10px;"></div>
-            </div>
-            
-            <div class="footer">
-              <p>Av. El Salto 4651, Huechuraba, Santiago.</p>
-              <p>Fono: (56 2) 4881800 &nbsp;&nbsp;&nbsp; Fax: (56 2) 4881818</p>
-              <p style="text-align: right; font-weight: bold;">RBU SANTIAGO SA</p>
-            </div>
-            
-            <div class="detail-section">
-              <p class="detail-title">Detalle Descuento</p>
-              <table class="detail-table">
-                <tr>
-                  <th style="text-align: left;">Concepto</th>
-                  <th style="text-align: right;">COSTO</th>
-                </tr>
-                <tr>
-                  <td>${form.reason === 'PERDIDA' ? 'Perdida Credencial' : 'Deterioro Credencial'}</td>
-                  <td style="text-align: right;">$${form.discount_amount.toLocaleString('es-CL')}</td>
-                </tr>
-              </table>
-            </div>
-          </body>
-          </html>
-        `);
-                printWindow.document.close();
-                printWindow.print();
-            }
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            const terminalName = terminalOptions.find(t => t.value === form.person_terminal)?.label || form.person_terminal;
+            const fechaActual = new Date().toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' });
+
+            printWindow.document.write(`
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Autorizacion de Descuento - ${form.person_name || 'Trabajador'}</title>
+  <style>
+    @page { size: letter; margin: 1cm 1.5cm; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; font-size: 11px; line-height: 1.3; color: #000; padding: 10px; }
+    
+    .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 3px solid #c00; margin-bottom: 12px; }
+    .logo { font-size: 28px; font-weight: bold; color: #c00; letter-spacing: 2px; }
+    .header-right { text-align: right; color: #c00; font-weight: bold; font-size: 10px; }
+    
+    .title { background: #c00; color: white; text-align: center; padding: 6px 0; font-weight: bold; font-size: 13px; margin-bottom: 12px; }
+    
+    .row { display: flex; align-items: center; margin-bottom: 6px; gap: 8px; }
+    .label { font-weight: bold; white-space: nowrap; min-width: 140px; }
+    .value { flex: 1; border-bottom: 1px solid #333; padding-left: 5px; min-height: 16px; }
+    
+    .auth-box { border: 2px solid #333; padding: 12px; margin: 12px 0; text-align: center; }
+    .auth-title { font-weight: bold; margin-bottom: 4px; }
+    .auth-amount { font-size: 16px; font-weight: bold; margin: 6px 0; }
+    .auth-concept { font-weight: bold; margin-bottom: 8px; }
+    .auth-details { text-align: right; font-size: 10px; line-height: 1.4; }
+    .auth-details p { margin: 2px 0; }
+    
+    .legal-text { font-size: 9px; text-align: justify; line-height: 1.3; margin: 10px 0; padding: 8px; border-top: 1px solid #333; }
+    
+    .signature-section { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 8px; }
+    .signature-left { flex: 1; }
+    .signature-label { font-weight: bold; font-style: italic; font-size: 10px; margin-bottom: 25px; }
+    .signature-line { border-bottom: 1px solid #333; margin-top: 35px; width: 200px; }
+    .signature-right { text-align: right; font-size: 10px; }
+    
+    .obs-box { border: 1px solid #333; margin: 10px 0; }
+    .obs-header { background: #555; color: white; text-align: center; padding: 3px; font-size: 10px; font-weight: bold; }
+    .obs-content { min-height: 35px; }
+    
+    .detail-section { margin-top: 10px; padding-top: 8px; border-top: 2px solid #333; }
+    .detail-title { font-weight: bold; font-style: italic; font-size: 10px; margin-bottom: 5px; }
+    table { width: 100%; border-collapse: collapse; font-size: 10px; }
+    th, td { border: 1px solid #333; padding: 4px 8px; }
+    th { background: #f0f0f0; text-align: left; }
+    .text-right { text-align: right; }
+    
+    .footer { margin-top: 10px; padding-top: 6px; border-top: 1px solid #333; display: flex; justify-content: space-between; font-size: 9px; }
+    .footer-left { color: #555; }
+    .footer-right { font-weight: bold; color: #c00; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">RBU</div>
+    <div class="header-right">RBU Santiago.</div>
+  </div>
+  
+  <div class="title">Autorizacion de Descuento</div>
+  
+  <div class="row">
+    <span class="label">NOMBRE TRABAJADOR:</span>
+    <span class="value">${form.person_name || ''}</span>
+  </div>
+  
+  <div class="row">
+    <span class="label">RUT:</span>
+    <span class="value" style="max-width: 120px;">${form.person_rut || ''}</span>
+    <span class="label" style="min-width: auto; margin-left: 15px;">Cargo:</span>
+    <span class="value">${form.person_cargo || ''}</span>
+  </div>
+  
+  <div class="auth-box">
+    <p class="auth-title">EL TRABAJADOR INDIVIDUALIZADO AUTORIZA EN ESTE ACTO</p>
+    <p class="auth-amount">EL DESCUENTO DE: $ ${form.discount_amount.toLocaleString('es-CL')}</p>
+    <p class="auth-concept">POR CONCEPTO DE: ${form.reason === 'PERDIDA' ? 'Perdida de Credencial' : 'Deterioro de Credencial'}</p>
+    <div class="auth-details">
+      <p>A descontar en: <strong>1 Cuota</strong></p>
+      <p>A contar de: <strong>Mes en curso</strong></p>
+      <p>Valor cuota: <strong>$ ${form.discount_amount.toLocaleString('es-CL')}</strong></p>
+    </div>
+  </div>
+  
+  <div class="legal-text">
+    El trabajador, mediante el presente instrumento, otorga mandato expreso a REDBUS URBANO S.A. para que descuente de sus remuneraciones en las cuotas y plazos indicados la suma senalada. Asimismo faculta expresamente a REDBUS URBANO S.A. para que en el evento de que por cualquier causa se pusiese termino al contrato de trabajo, descuente el total del saldo adeudado de las indemnizaciones a que tenga derecho y/o otros emolumentos que pudiere tener derecho al termino de la relacion laboral.
+  </div>
+  
+  <div class="signature-section">
+    <div class="signature-left">
+      <p class="signature-label">Firma y RUT del trabajador</p>
+      <div class="signature-line"></div>
+    </div>
+    <div class="signature-right">
+      <p>Fecha: <strong>${fechaActual}</strong></p>
+    </div>
+  </div>
+  
+  <div class="obs-box">
+    <div class="obs-header">Observaciones</div>
+    <div class="obs-content"></div>
+  </div>
+  
+  <div class="detail-section">
+    <p class="detail-title">Detalle Descuento</p>
+    <table>
+      <tr>
+        <th>Concepto</th>
+        <th class="text-right">Costo</th>
+      </tr>
+      <tr>
+        <td>${form.reason === 'PERDIDA' ? 'Perdida de Credencial' : 'Deterioro de Credencial'}</td>
+        <td class="text-right">$ ${form.discount_amount.toLocaleString('es-CL')}</td>
+      </tr>
+    </table>
+  </div>
+  
+  <div class="footer">
+    <div class="footer-left">Av. El Salto 4651, Huechuraba, Santiago. | Fono: (56 2) 4881800</div>
+    <div class="footer-right">RBU SANTIAGO SA</div>
+  </div>
+</body>
+</html>
+            `);
+            printWindow.document.close();
+            setTimeout(() => printWindow.print(), 250);
         }
     };
 

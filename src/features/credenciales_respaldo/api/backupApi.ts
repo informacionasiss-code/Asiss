@@ -363,75 +363,103 @@ export const fetchKpis = async (): Promise<BackupKpis> => {
 };
 
 // ============================================
-// EMAIL SENDING
+// EMAIL SENDING (uses Supabase Edge Functions)
 // ============================================
 
 export const sendBackupEmails = async (
     loan: BackupLoan,
     managerEmail: string,
     cc?: string
-): Promise<void> => {
-    const emailApiUrl = import.meta.env.VITE_EMAIL_API_URL;
-    if (!emailApiUrl) {
-        console.warn('Email API URL not configured');
-        return;
-    }
-
+): Promise<{ success: boolean; error?: string }> => {
     const cardNumber = loan.backup_cards?.card_number || 'N/A';
+    const terminalName = loan.person_terminal;
+    const reasonText = loan.reason === 'PERDIDA' ? 'Perdida de Credencial' : 'Deterioro de Credencial';
+    const fechaEntrega = new Date(loan.issued_at).toLocaleDateString('es-CL', {
+        year: 'numeric', month: 'long', day: 'numeric'
+    });
 
-    // Email to manager (new credential request)
-    const managerBody = `
-Se solicita la creación de una nueva credencial:
+    try {
+        // EMAIL 1: To manager (person who creates the new credential)
+        const managerSubject = `Solicitud Nueva Credencial - ${loan.person_name}`;
+        const managerBody = `
+SOLICITUD DE NUEVA CREDENCIAL
 
 Trabajador: ${loan.person_name}
 RUT: ${loan.person_rut}
-Terminal: ${loan.person_terminal}
+Terminal: ${terminalName}
 Cargo: ${loan.person_cargo || 'No especificado'}
-Motivo: ${loan.reason === 'PERDIDA' ? 'Pérdida' : 'Deterioro'}
+
+MOTIVO: ${reasonText}
 
 Tarjeta de respaldo asignada: ${cardNumber}
 Fecha de solicitud: ${loan.requested_at}
-`;
+Supervisor que entrego: ${loan.created_by_supervisor}
 
-    await fetch(emailApiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            subject: 'Solicitud de Nueva Credencial - ' + loan.person_name,
-            body: managerBody,
-            audience: 'manual',
-            manualRecipients: [managerEmail],
-            cc: cc ? cc.split(',').map((e) => e.trim()) : undefined,
-        }),
-    });
+Por favor proceder con la emision de una nueva credencial para este trabajador.
+`.trim();
 
-    // Email to boss (notification)
-    const bossBody = `
+        const { error: managerError } = await supabase.functions.invoke('send-email', {
+            body: {
+                subject: managerSubject,
+                body: managerBody,
+                audience: 'manual',
+                manualRecipients: [managerEmail],
+                cc: cc ? cc.split(',').map((e) => e.trim()).filter(Boolean) : undefined,
+            },
+        });
+
+        if (managerError) {
+            console.error('Error sending manager email:', managerError);
+        }
+
+        // EMAIL 2: To boss (notification about backup card)
+        const bossSubject = `Notificacion Credencial Respaldo - ${loan.person_name}`;
+        const bossBody = `
 Estimado/a,
 
-Se informa que el trabajador ${loan.person_name} (RUT: ${loan.person_rut}) trabajará con la tarjeta de respaldo N° ${cardNumber} mientras se gestiona la emisión de una nueva credencial.
+Se le informa que el trabajador a su cargo utilizara una tarjeta de respaldo mientras se gestiona una nueva credencial.
 
-Motivo: ${loan.reason === 'PERDIDA' ? 'Pérdida de credencial' : 'Deterioro de credencial'}
-Terminal: ${loan.person_terminal}
-${loan.discount_applied ? `Se ha aplicado un descuento de $${loan.discount_amount.toLocaleString('es-CL')} (1 cuota).` : ''}
+DATOS DEL TRABAJADOR:
+- Nombre: ${loan.person_name}
+- RUT: ${loan.person_rut}
+- Terminal: ${terminalName}
+- Cargo: ${loan.person_cargo || 'No especificado'}
 
-Fecha de entrega de respaldo: ${new Date(loan.issued_at).toLocaleDateString('es-CL')}
+INFORMACION DEL RESPALDO:
+- Tarjeta asignada: N° ${cardNumber}
+- Motivo: ${reasonText}
+- Fecha de entrega: ${fechaEntrega}
+${loan.discount_applied ? `- Descuento aplicado: $${loan.discount_amount.toLocaleString('es-CL')} (1 cuota)` : ''}
+
+Una vez que el trabajador reciba su nueva credencial, debera devolver la tarjeta de respaldo.
 
 Saludos cordiales,
-Gestión de Personal
-`;
+Gestion de Personal
+`.trim();
 
-    await fetch(emailApiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            subject: 'Notificación Credencial de Respaldo - ' + loan.person_name,
-            body: bossBody,
-            audience: 'manual',
-            manualRecipients: [loan.boss_email],
-        }),
-    });
+        const { error: bossError } = await supabase.functions.invoke('send-email', {
+            body: {
+                subject: bossSubject,
+                body: bossBody,
+                audience: 'manual',
+                manualRecipients: [loan.boss_email],
+            },
+        });
 
-    // Mark emails as sent
-    await updateLoanEmailsSent(loan.id);
+        if (bossError) {
+            console.error('Error sending boss email:', bossError);
+        }
+
+        // Mark emails as sent
+        await updateLoanEmailsSent(loan.id);
+
+        return { success: true };
+    } catch (error) {
+        console.error('Error sending backup emails:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Error desconocido al enviar correos'
+        };
+    }
 };
+

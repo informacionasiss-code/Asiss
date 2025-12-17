@@ -169,14 +169,14 @@ export const CredencialesRespaldoPage = () => {
             (s) => s.scope_code === loan.person_terminal || s.scope_type === 'GLOBAL'
         );
         if (settings) {
-            try {
-                await sendBackupEmails(loan, settings.manager_email, settings.cc_emails || undefined);
-                alert('Correos reenviados correctamente');
-            } catch (error) {
-                alert('Error al reenviar correos');
+            const result = await sendBackupEmails(loan, settings.manager_email, settings.cc_emails || undefined);
+            if (result.success) {
+                alert('Correos enviados correctamente');
+            } else {
+                alert('Error al enviar correos: ' + (result.error || 'Error desconocido'));
             }
         } else {
-            alert('Configure los correos primero');
+            alert('Configure los correos primero en el boton "Correos"');
         }
     };
 
@@ -274,88 +274,85 @@ export const CredencialesRespaldoPage = () => {
                 <ChartsPanel loans={loansQuery.data} />
             )}
 
-            {/* Filters */}
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                        <Filter className="w-4 h-4" />
-                        Filtros:
-                    </div>
+            {/* Compact Filters */}
+            <div className="bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm flex flex-wrap items-center gap-2">
+                <Filter className="w-4 h-4 text-slate-400 flex-shrink-0" />
 
+                <input
+                    type="text"
+                    className="h-8 px-2 text-sm border border-slate-200 rounded-md w-32 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    placeholder="RUT/Nombre..."
+                    value={filters.search || ''}
+                    onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+                />
+
+                <select
+                    className="h-8 px-2 text-sm border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    value={terminalContext.value || ''}
+                    onChange={(e) => {
+                        if (e.target.value) {
+                            setTerminalContext({ mode: 'TERMINAL', value: e.target.value as any });
+                        } else {
+                            setTerminalContext({ mode: 'ALL' });
+                        }
+                    }}
+                >
+                    <option value="">Terminal</option>
+                    {terminalOptions.map((t) => (
+                        <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                </select>
+
+                <select
+                    className="h-8 px-2 text-sm border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    value={filters.status || 'TODAS'}
+                    onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value as any }))}
+                >
+                    <option value="TODAS">Estado</option>
+                    {STATUS_OPTIONS.map((s) => (
+                        <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
+                </select>
+
+                <select
+                    className="h-8 px-2 text-sm border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    value={filters.reason || 'TODAS'}
+                    onChange={(e) => setFilters((prev) => ({ ...prev, reason: e.target.value as any }))}
+                >
+                    <option value="TODAS">Motivo</option>
+                    {REASON_OPTIONS.map((r) => (
+                        <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
+                </select>
+
+                <label className="flex items-center gap-1 cursor-pointer text-xs text-slate-600 whitespace-nowrap">
                     <input
-                        type="text"
-                        className="input w-auto min-w-[180px]"
-                        placeholder="Buscar RUT o nombre..."
-                        value={filters.search || ''}
-                        onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+                        type="checkbox"
+                        checked={filters.alertsOnly || false}
+                        onChange={(e) => setFilters((prev) => ({ ...prev, alertsOnly: e.target.checked }))}
+                        className="w-3.5 h-3.5 rounded border-slate-300"
                     />
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                    Atrasados
+                </label>
 
-                    <select
-                        className="input w-auto"
-                        value={terminalContext.value || ''}
-                        onChange={(e) => {
-                            if (e.target.value) {
-                                setTerminalContext({ mode: 'TERMINAL', value: e.target.value as any });
-                            } else {
-                                setTerminalContext({ mode: 'ALL' });
-                            }
-                        }}
-                    >
-                        <option value="">Todos los terminales</option>
-                        {terminalOptions.map((t) => (
-                            <option key={t.value} value={t.value}>{t.label}</option>
-                        ))}
-                    </select>
+                <div className="h-4 w-px bg-slate-200 hidden sm:block" />
 
-                    <select
-                        className="input w-auto"
-                        value={filters.status || 'TODAS'}
-                        onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value as any }))}
-                    >
-                        <option value="TODAS">Todos los estados</option>
-                        {STATUS_OPTIONS.map((s) => (
-                            <option key={s.value} value={s.value}>{s.label}</option>
-                        ))}
-                    </select>
-
-                    <select
-                        className="input w-auto"
-                        value={filters.reason || 'TODAS'}
-                        onChange={(e) => setFilters((prev) => ({ ...prev, reason: e.target.value as any }))}
-                    >
-                        <option value="TODAS">Todos los motivos</option>
-                        {REASON_OPTIONS.map((r) => (
-                            <option key={r.value} value={r.value}>{r.label}</option>
-                        ))}
-                    </select>
-
-                    <label className="flex items-center gap-2 cursor-pointer text-sm">
-                        <input
-                            type="checkbox"
-                            checked={filters.alertsOnly || false}
-                            onChange={(e) => setFilters((prev) => ({ ...prev, alertsOnly: e.target.checked }))}
-                            className="w-4 h-4 rounded border-slate-300"
-                        />
-                        <AlertTriangle className="w-4 h-4 text-amber-500" />
-                        Solo atrasados
-                    </label>
-
-                    <input
-                        type="date"
-                        className="input w-auto"
-                        value={filters.dateFrom || ''}
-                        onChange={(e) => setFilters((prev) => ({ ...prev, dateFrom: e.target.value }))}
-                        placeholder="Desde"
-                    />
-
-                    <input
-                        type="date"
-                        className="input w-auto"
-                        value={filters.dateTo || ''}
-                        onChange={(e) => setFilters((prev) => ({ ...prev, dateTo: e.target.value }))}
-                        placeholder="Hasta"
-                    />
-                </div>
+                <input
+                    type="date"
+                    className="h-8 px-2 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    value={filters.dateFrom || ''}
+                    onChange={(e) => setFilters((prev) => ({ ...prev, dateFrom: e.target.value }))}
+                    title="Desde"
+                />
+                <span className="text-slate-400 text-xs">-</span>
+                <input
+                    type="date"
+                    className="h-8 px-2 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    value={filters.dateTo || ''}
+                    onChange={(e) => setFilters((prev) => ({ ...prev, dateTo: e.target.value }))}
+                    title="Hasta"
+                />
             </div>
 
             {/* Table */}
