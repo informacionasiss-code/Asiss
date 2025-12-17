@@ -32,11 +32,18 @@ export const SinCredencialesForm = ({ initialData, supervisorName, onSubmit, onC
 
     const handleStaffFound = (staff: Staff | null) => {
         if (staff) {
+            // Parse horario "08:00-18:00" to get start and end times
+            const [startTime, endTime] = (staff.horario || '').split('-');
+            const trimmedStart = startTime?.trim() || '';
+            const trimmedEnd = endTime?.trim() || '';
+
             setForm((prev) => ({
                 ...prev,
                 nombre: staff.nombre,
                 cargo: staff.cargo,
                 terminal_code: staff.terminal_code as TerminalCode,
+                start_time: trimmedStart,
+                end_time: trimmedEnd,
             }));
         }
     };
