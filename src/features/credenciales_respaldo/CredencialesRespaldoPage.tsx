@@ -400,8 +400,12 @@ export const CredencialesRespaldoPage = () => {
             <LoanFormModal
                 isOpen={showNewLoanModal}
                 onClose={() => setShowNewLoanModal(false)}
-                onSubmit={async (values) => {
-                    await createLoanMutation.mutateAsync(values);
+                onSubmit={async (values, printFn) => {
+                    const result = await createLoanMutation.mutateAsync(values);
+                    // Print AFTER successful save if discount was applied
+                    if (values.discount_applied) {
+                        printFn();
+                    }
                 }}
                 isLoading={createLoanMutation.isPending}
                 supervisorName={session?.supervisorName || 'Supervisor'}

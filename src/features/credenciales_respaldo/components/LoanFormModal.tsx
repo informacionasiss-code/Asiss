@@ -10,7 +10,7 @@ import { terminalOptions } from '../../../shared/utils/terminal';
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (values: LoanFormValues) => Promise<void>;
+    onSubmit: (values: LoanFormValues, printFn: () => void) => Promise<void>;
     isLoading?: boolean;
     supervisorName: string;
 }
@@ -85,12 +85,8 @@ export const LoanFormModal = ({ isOpen, onClose, onSubmit, isLoading, supervisor
             return;
         }
 
-        // Auto-print discount form if discount is applied
-        if (form.discount_applied) {
-            handlePrint();
-        }
-
-        await onSubmit(form);
+        // Pass handlePrint to parent so it can print AFTER successful save
+        await onSubmit(form, handlePrint);
     };
 
     const handlePrint = () => {
