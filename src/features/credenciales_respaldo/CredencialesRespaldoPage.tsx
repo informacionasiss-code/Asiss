@@ -36,6 +36,7 @@ import {
 } from './types';
 import { formatRut } from './utils/rut';
 import { useSessionStore } from '../../shared/state/sessionStore';
+import { showSuccessToast, showErrorToast, showWarningToast } from '../../shared/state/toastStore';
 
 export const CredencialesRespaldoPage = () => {
     const queryClient = useQueryClient();
@@ -180,7 +181,7 @@ export const CredencialesRespaldoPage = () => {
         );
 
         if (!settings) {
-            alert('Configure los correos primero en el boton "Correos"');
+            showWarningToast('Configuración requerida', 'Configure los correos primero en el botón "Correos"');
             setShowSignedDocModal(false);
             setPendingEmailLoan(null);
             return;
@@ -196,10 +197,10 @@ export const CredencialesRespaldoPage = () => {
         setEmailSendLoading(false);
 
         if (result.success) {
-            alert('Correos enviados correctamente');
+            showSuccessToast('Correos enviados', 'Los correos de notificación fueron enviados correctamente', pendingEmailLoan.person_name);
             queryClient.invalidateQueries({ queryKey: ['backup-loans'] });
         } else {
-            alert('Error al enviar correos: ' + (result.error || 'Error desconocido'));
+            showErrorToast('Error al enviar correos', result.error || 'Error desconocido');
         }
 
         setShowSignedDocModal(false);
