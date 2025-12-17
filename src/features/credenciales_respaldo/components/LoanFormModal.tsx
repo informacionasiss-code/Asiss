@@ -90,133 +90,425 @@ export const LoanFormModal = ({ isOpen, onClose, onSubmit, isLoading, supervisor
     const handlePrint = () => {
         const printWindow = window.open('', '_blank');
         if (printWindow) {
-            const terminalName = terminalOptions.find(t => t.value === form.person_terminal)?.label || form.person_terminal;
-            const fechaActual = new Date().toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' });
+            const fechaActual = new Date().toLocaleDateString('es-CL', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
 
             printWindow.document.write(`
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-  <title>Autorizacion de Descuento - ${form.person_name || 'Trabajador'}</title>
-  <style>
-    @page { size: letter; margin: 1cm 1.5cm; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; font-size: 11px; line-height: 1.3; color: #000; padding: 10px; }
-    
-    .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 3px solid #c00; margin-bottom: 12px; }
-    .logo { font-size: 28px; font-weight: bold; color: #c00; letter-spacing: 2px; }
-    .header-right { text-align: right; color: #c00; font-weight: bold; font-size: 10px; }
-    
-    .title { background: #c00; color: white; text-align: center; padding: 6px 0; font-weight: bold; font-size: 13px; margin-bottom: 12px; }
-    
-    .row { display: flex; align-items: center; margin-bottom: 6px; gap: 8px; }
-    .label { font-weight: bold; white-space: nowrap; min-width: 140px; }
-    .value { flex: 1; border-bottom: 1px solid #333; padding-left: 5px; min-height: 16px; }
-    
-    .auth-box { border: 2px solid #333; padding: 12px; margin: 12px 0; text-align: center; }
-    .auth-title { font-weight: bold; margin-bottom: 4px; }
-    .auth-amount { font-size: 16px; font-weight: bold; margin: 6px 0; }
-    .auth-concept { font-weight: bold; margin-bottom: 8px; }
-    .auth-details { text-align: right; font-size: 10px; line-height: 1.4; }
-    .auth-details p { margin: 2px 0; }
-    
-    .legal-text { font-size: 9px; text-align: justify; line-height: 1.3; margin: 10px 0; padding: 8px; border-top: 1px solid #333; }
-    
-    .signature-section { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 8px; }
-    .signature-left { flex: 1; }
-    .signature-label { font-weight: bold; font-style: italic; font-size: 10px; margin-bottom: 25px; }
-    .signature-line { border-bottom: 1px solid #333; margin-top: 35px; width: 200px; }
-    .signature-right { text-align: right; font-size: 10px; }
-    
-    .obs-box { border: 1px solid #333; margin: 10px 0; }
-    .obs-header { background: #555; color: white; text-align: center; padding: 3px; font-size: 10px; font-weight: bold; }
-    .obs-content { min-height: 35px; }
-    
-    .detail-section { margin-top: 10px; padding-top: 8px; border-top: 2px solid #333; }
-    .detail-title { font-weight: bold; font-style: italic; font-size: 10px; margin-bottom: 5px; }
-    table { width: 100%; border-collapse: collapse; font-size: 10px; }
-    th, td { border: 1px solid #333; padding: 4px 8px; }
-    th { background: #f0f0f0; text-align: left; }
-    .text-right { text-align: right; }
-    
-    .footer { margin-top: 10px; padding-top: 6px; border-top: 1px solid #333; display: flex; justify-content: space-between; font-size: 9px; }
-    .footer-left { color: #555; }
-    .footer-right { font-weight: bold; color: #c00; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autorización de Descuento - ${form.person_name || 'RBU'}</title>
+    <style>
+        @page { size: letter; margin: 15mm 20mm; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: white;
+            padding: 0;
+            color: #000;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .page {
+            width: 100%;
+            max-width: 210mm;
+            margin: 0 auto;
+        }
+
+        /* Header Styles */
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+            border-bottom: 3px solid black;
+        }
+
+        /* Logo RBU con camion CSS */
+        .logo-container {
+            position: relative;
+            width: 150px;
+            height: 50px;
+        }
+        .truck-body {
+            border: 4px solid #003399;
+            border-radius: 8px;
+            width: 120px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: white;
+            z-index: 2;
+        }
+        .truck-cab {
+            position: absolute;
+            top: 5px;
+            right: 15px;
+            width: 25px;
+            height: 35px;
+            border-top: 4px solid #003399;
+            border-right: 4px solid #003399;
+            border-radius: 0 5px 0 0;
+        }
+        .logo-text {
+            color: #cc0000;
+            font-weight: 900;
+            font-size: 32px;
+            font-family: 'Arial Black', Arial, sans-serif;
+            letter-spacing: -2px;
+        }
+        .wheel {
+            width: 12px;
+            height: 12px;
+            border: 4px solid #003399;
+            border-radius: 50%;
+            position: absolute;
+            bottom: -5px;
+            background: white;
+            z-index: 3;
+        }
+        .w1 { left: 20px; }
+        .w2 { left: 90px; }
+
+        .rbu-santiago {
+            color: #cc0000;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .title-bar {
+            background-color: black;
+            color: white;
+            text-align: center;
+            padding: 8px 0;
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 25px;
+        }
+
+        /* Form Fields */
+        .field-row {
+            display: flex;
+            margin-bottom: 20px;
+            align-items: flex-end;
+        }
+        
+        .field-label {
+            font-weight: bold;
+            font-size: 11px;
+            white-space: nowrap;
+            margin-right: 10px;
+        }
+
+        .field-line {
+            border-bottom: 2px solid black;
+            flex-grow: 1;
+            min-height: 18px;
+            padding-left: 5px;
+            font-size: 12px;
+        }
+
+        .rut-row {
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .rut-container {
+            display: flex;
+            width: 38%;
+            align-items: flex-end;
+        }
+        
+        .cargo-container {
+            display: flex;
+            width: 55%;
+            align-items: flex-end;
+        }
+
+        /* Authorization Text */
+        .auth-text {
+            text-align: center;
+            font-weight: bold;
+            margin: 25px 0;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+        }
+
+        .amount-row {
+            display: flex;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 12px;
+            gap: 20px;
+        }
+
+        .concept-row {
+            margin-left: 30px;
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+        .desc-small {
+            font-size: 10px;
+            margin-left: 30px;
+            margin-bottom: 18px;
+            color: #555;
+        }
+
+        /* Right aligned details */
+        .details-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            margin-right: 20px;
+        }
+        
+        .detail-item {
+            display: flex;
+            align-items: flex-end;
+            margin-bottom: 8px;
+            width: 280px;
+            justify-content: flex-end;
+        }
+        
+        .detail-item label {
+            font-size: 11px;
+            margin-right: 10px;
+        }
+        
+        .detail-value {
+            border-bottom: 2px solid black;
+            width: 110px;
+            text-align: right;
+            font-weight: bold;
+            font-size: 14px;
+            padding-bottom: 2px;
+            padding-right: 5px;
+        }
+
+        /* Signature & Date */
+        .sig-date-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 30px;
+            margin-bottom: 10px;
+            font-style: italic;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .date-val {
+            font-size: 12px;
+            font-style: normal;
+        }
+
+        .signature-line {
+            border-bottom: 2px solid black;
+            width: 200px;
+            margin-top: 40px;
+        }
+
+        .legal-text {
+            font-size: 9px;
+            text-align: justify;
+            line-height: 1.3;
+            margin: 15px 0;
+            padding-top: 10px;
+            border-top: 1px solid #ccc;
+        }
+
+        /* Observations Box */
+        .obs-header {
+            background-color: #333;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            font-size: 11px;
+            padding: 4px;
+            border: 2px solid black;
+            border-bottom: none;
+        }
+        .obs-box {
+            border: 2px solid black;
+            height: 50px;
+            margin-bottom: 30px;
+        }
+
+        /* Footer */
+        .footer-line {
+            border-top: 3px solid black;
+            padding-top: 8px;
+            text-align: center;
+            font-size: 10px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .company-name {
+            text-align: right;
+            font-weight: bold;
+            margin-top: 15px;
+            font-size: 11px;
+            border-bottom: 2px solid black;
+            display: inline-block;
+            float: right;
+            padding-bottom: 2px;
+            text-decoration: underline;
+        }
+
+        /* Bottom Detail Section */
+        .bottom-detail-title {
+            text-align: center;
+            font-style: italic;
+            font-weight: bold;
+            font-size: 14px;
+            margin-top: 30px;
+            margin-bottom: 10px;
+            clear: both;
+        }
+        
+        .bottom-table {
+            width: 100%;
+            font-size: 11px;
+            overflow: hidden;
+        }
+        .bt-left { 
+            float: left; 
+            font-weight: bold;
+        }
+        .bt-right { 
+            float: right; 
+            text-align: center;
+        }
+        .costo-header {
+            font-weight: bold;
+            font-size: 10px;
+            margin-bottom: 3px;
+            color: #555;
+        }
+
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
 </head>
 <body>
-  <div class="header">
-    <div class="logo">RBU</div>
-    <div class="header-right">RBU Santiago.</div>
-  </div>
-  
-  <div class="title">Autorizacion de Descuento</div>
-  
-  <div class="row">
-    <span class="label">NOMBRE TRABAJADOR:</span>
-    <span class="value">${form.person_name || ''}</span>
-  </div>
-  
-  <div class="row">
-    <span class="label">RUT:</span>
-    <span class="value" style="max-width: 120px;">${form.person_rut || ''}</span>
-    <span class="label" style="min-width: auto; margin-left: 15px;">Cargo:</span>
-    <span class="value">${form.person_cargo || ''}</span>
-  </div>
-  
-  <div class="auth-box">
-    <p class="auth-title">EL TRABAJADOR INDIVIDUALIZADO AUTORIZA EN ESTE ACTO</p>
-    <p class="auth-amount">EL DESCUENTO DE: $ ${form.discount_amount.toLocaleString('es-CL')}</p>
-    <p class="auth-concept">POR CONCEPTO DE: ${form.reason === 'PERDIDA' ? 'Perdida de Credencial' : 'Deterioro de Credencial'}</p>
-    <div class="auth-details">
-      <p>A descontar en: <strong>1 Cuota</strong></p>
-      <p>A contar de: <strong>Mes en curso</strong></p>
-      <p>Valor cuota: <strong>$ ${form.discount_amount.toLocaleString('es-CL')}</strong></p>
+
+    <div class="page">
+        <div class="header-top">
+            <div class="logo-container">
+                <div class="truck-cab"></div>
+                <div class="truck-body">
+                    <span class="logo-text">RBU</span>
+                </div>
+                <div class="wheel w1"></div>
+                <div class="wheel w2"></div>
+            </div>
+            <div class="rbu-santiago">RBU Santiago.</div>
+        </div>
+
+        <div class="title-bar">
+            Autorización de Descuento
+        </div>
+
+        <div class="field-row">
+            <span class="field-label">NOMBRE DEL<br>TRABAJADOR:</span>
+            <div class="field-line">${form.person_name || ''}</div>
+        </div>
+
+        <div class="field-row rut-row">
+            <div class="rut-container">
+                <span class="field-label">RUT :</span>
+                <div class="field-line">${form.person_rut || ''}</div>
+            </div>
+            <div class="cargo-container">
+                <span class="field-label">Cargo desempeñado:</span>
+                <div class="field-line">${form.person_cargo || ''}</div>
+            </div>
+        </div>
+
+        <div class="auth-text">
+            EL TRABAJADOR INDIVIDUALIZADO AUTORIZA EN ESTE ACTO
+        </div>
+
+        <div class="amount-row">
+            <span>EL DESCUENTO DE:</span>
+            <span>$</span>
+            <span>${form.discount_amount.toLocaleString('es-CL')}</span>
+        </div>
+
+        <div class="concept-row">
+            <strong>POR CONCEPTO DE:</strong> &nbsp; ${form.reason === 'PERDIDA' ? 'Pérdida Credencial' : 'Deterioro Credencial'}
+        </div>
+        <div class="desc-small">Descripción : Tarjeta de acceso vehicular</div>
+
+        <div class="details-right">
+            <div class="detail-item">
+                <label>A descontar en:</label>
+                <div class="detail-value">1 Cuota</div>
+            </div>
+            <div class="detail-item">
+                <label>A contar de:</label>
+                <div class="detail-value" style="font-style: italic; font-size: 12px;">Mes en curso</div>
+            </div>
+            <div class="detail-item">
+                <label>Valor de cada cuota:</label>
+                <div class="detail-value">$ ${form.discount_amount.toLocaleString('es-CL')}</div>
+            </div>
+        </div>
+
+        <div class="sig-date-row">
+            <div>
+                <span>Firma y Rut del trabajador</span>
+                <div class="signature-line"></div>
+            </div>
+            <span>Fecha : &nbsp; <span class="date-val"><strong>${fechaActual}</strong></span></span>
+        </div>
+
+        <div class="legal-text">
+            El trabajador, mediante el presente instrumento, otorga mandato expreso a REDBUS URBANO S.A. para que descuente de sus remuneraciones en las cuotas y plazos indicados la suma indicada en este acto. Asimismo faculta expresamente a REDBUS URBANO S.A., para que en el evento de que por cualquier causa se pusiese término al contrato de trabajo, descuente el total del saldo adeudado de las indemnizaciones a que tenga derecho y/o otros emolumentos que pudiere tener derecho al término de la relación laboral.
+        </div>
+
+        <div class="obs-header">Observaciones</div>
+        <div class="obs-box"></div>
+
+        <div class="footer-line">
+            Av. El Salto 4651, Huechuraba, Santiago.<br>
+            Fono: (56 2) 4881800 &nbsp;&nbsp; Fax: (56 2) 4881818
+        </div>
+
+        <div style="overflow: hidden; margin-top: 15px;">
+            <div class="company-name">REDBUS URBANO S.A.</div>
+        </div>
+
+        <div class="bottom-detail-title">Detalle Descuento</div>
+        
+        <div class="bottom-table">
+            <span class="bt-left">${form.reason === 'PERDIDA' ? 'Pérdida Credencial' : 'Deterioro Credencial'}</span>
+            <div class="bt-right">
+                <div class="costo-header">COSTO</div>
+                <div><strong>$${form.discount_amount.toLocaleString('es-CL')}</strong></div>
+            </div>
+        </div>
+
     </div>
-  </div>
-  
-  <div class="legal-text">
-    El trabajador, mediante el presente instrumento, otorga mandato expreso a REDBUS URBANO S.A. para que descuente de sus remuneraciones en las cuotas y plazos indicados la suma senalada. Asimismo faculta expresamente a REDBUS URBANO S.A. para que en el evento de que por cualquier causa se pusiese termino al contrato de trabajo, descuente el total del saldo adeudado de las indemnizaciones a que tenga derecho y/o otros emolumentos que pudiere tener derecho al termino de la relacion laboral.
-  </div>
-  
-  <div class="signature-section">
-    <div class="signature-left">
-      <p class="signature-label">Firma y RUT del trabajador</p>
-      <div class="signature-line"></div>
-    </div>
-    <div class="signature-right">
-      <p>Fecha: <strong>${fechaActual}</strong></p>
-    </div>
-  </div>
-  
-  <div class="obs-box">
-    <div class="obs-header">Observaciones</div>
-    <div class="obs-content"></div>
-  </div>
-  
-  <div class="detail-section">
-    <p class="detail-title">Detalle Descuento</p>
-    <table>
-      <tr>
-        <th>Concepto</th>
-        <th class="text-right">Costo</th>
-      </tr>
-      <tr>
-        <td>${form.reason === 'PERDIDA' ? 'Perdida de Credencial' : 'Deterioro de Credencial'}</td>
-        <td class="text-right">$ ${form.discount_amount.toLocaleString('es-CL')}</td>
-      </tr>
-    </table>
-  </div>
-  
-  <div class="footer">
-    <div class="footer-left">Av. El Salto 4651, Huechuraba, Santiago. | Fono: (56 2) 4881800</div>
-    <div class="footer-right">RBU SANTIAGO SA</div>
-  </div>
+
 </body>
 </html>
             `);
             printWindow.document.close();
-            setTimeout(() => printWindow.print(), 250);
+            setTimeout(() => printWindow.print(), 300);
         }
     };
 
