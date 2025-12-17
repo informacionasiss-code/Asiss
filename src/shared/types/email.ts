@@ -2,6 +2,11 @@ import { TerminalCode } from './terminal';
 
 export type EmailAudience = 'todos' | 'por_terminal' | 'manual';
 
+export interface EmailAttachment {
+  filename: string;
+  content: string; // base64
+}
+
 export interface EmailPayload {
   audience: EmailAudience;
   terminalCodes?: TerminalCode[];
@@ -9,6 +14,7 @@ export interface EmailPayload {
   cc?: string[];
   subject: string;
   body: string;
+  attachments?: EmailAttachment[];
 }
 
 export interface EmailService {

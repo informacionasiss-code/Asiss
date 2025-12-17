@@ -363,13 +363,13 @@ export const fetchKpis = async (): Promise<BackupKpis> => {
 };
 
 // ============================================
-// EMAIL SENDING (uses Supabase Edge Functions)
+// EMAIL SENDING (uses shared emailService)
 // ============================================
 
-export interface EmailAttachment {
-    filename: string;
-    content: string; // base64
-}
+import { emailService } from '../../../shared/services/emailService';
+import { EmailAttachment } from '../../../shared/types/email';
+
+export type { EmailAttachment };
 
 export const sendBackupEmails = async (
     loan: BackupLoan,
@@ -408,21 +408,14 @@ Por favor proceder con la emision de una nueva credencial para este trabajador.
 ${attachment ? '\n[ADJUNTO: Autorizacion de descuento firmada]' : ''}
 `.trim();
 
-        const { data: managerData, error: managerError } = await supabase.functions.invoke('send-email', {
-            body: {
-                subject: managerSubject,
-                body: managerBody,
-                audience: 'manual',
-                manualRecipients: [managerEmail],
-                cc: cc ? cc.split(',').map((e) => e.trim()).filter(Boolean) : undefined,
-                attachments,
-            },
+        await emailService.sendEmail({
+            audience: 'manual',
+            manualRecipients: [managerEmail],
+            cc: cc ? cc.split(',').map((e) => e.trim()).filter(Boolean) : undefined,
+            subject: managerSubject,
+            body: managerBody,
+            attachments,
         });
-
-        if (managerError) {
-            console.error('Error sending manager email:', managerError);
-            return { success: false, error: `Error al enviar correo al gestor: ${managerError.message}` };
-        }
 
         // EMAIL 2: To boss (notification about backup card)
         const bossSubject = `Notificacion Credencial Respaldo - ${loan.person_name}`;
@@ -450,20 +443,13 @@ Saludos cordiales,
 Gestion de Personal
 `.trim();
 
-        const { data: bossData, error: bossError } = await supabase.functions.invoke('send-email', {
-            body: {
-                subject: bossSubject,
-                body: bossBody,
-                audience: 'manual',
-                manualRecipients: [loan.boss_email],
-                attachments,
-            },
+        await emailService.sendEmail({
+            audience: 'manual',
+            manualRecipients: [loan.boss_email],
+            subject: bossSubject,
+            body: bossBody,
+            attachments,
         });
-
-        if (bossError) {
-            console.error('Error sending boss email:', bossError);
-            return { success: false, error: `Error al enviar correo a jefatura: ${bossError.message}` };
-        }
 
         // Mark emails as sent
         await updateLoanEmailsSent(loan.id);
