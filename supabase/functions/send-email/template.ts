@@ -204,7 +204,8 @@ export const renderEmailTemplate = ({
                       </tr>
                     </table>
                     
-                    <!-- CTA Button -->
+                    <!-- CTA Button (hidden for credenciales - external recipients) -->
+                    ${module !== 'credenciales' ? `
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top: 32px;">
                       <tr>
                         <td align="center">
@@ -214,6 +215,7 @@ export const renderEmailTemplate = ({
                         </td>
                       </tr>
                     </table>
+                    ` : ''}
                     
                   </td>
                 </tr>
