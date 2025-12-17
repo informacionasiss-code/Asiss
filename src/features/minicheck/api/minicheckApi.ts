@@ -1,6 +1,7 @@
 import { minicheckSupabase, isMiniCheckConfigured } from './minicheckClient';
 import { MiniCheckFilters, Extintor, Tag, Mobileye, Odometro, Publicidad, MiniCheckResponse } from '../types';
-import { resolveTerminalsForContext } from '../../../shared/utils/terminal';
+import { resolveTerminalsForContext, TERMINALS } from '../../../shared/utils/terminal';
+import { TerminalCode } from '../../../shared/types/terminal';
 
 // Generic Fetcher
 const fetchTable = async <T>(
@@ -13,11 +14,13 @@ const fetchTable = async <T>(
         .from(table)
         .select('*');
 
-    // Terminal Filter
-    if (filters.terminalContext) {
-        const terminals = resolveTerminalsForContext(filters.terminalContext);
-        if (terminals.length > 0) {
-            query = query.in('terminal', terminals);
+    // Terminal Filter - Convert codes to display names for MiniCheck database
+    if (filters.terminalContext && filters.terminalContext.mode !== 'ALL') {
+        const terminalCodes = resolveTerminalsForContext(filters.terminalContext);
+        // Convert codes like 'EL_ROBLE' to display names like 'El Roble'
+        const terminalNames = terminalCodes.map(code => TERMINALS[code as TerminalCode]).filter(Boolean);
+        if (terminalNames.length > 0) {
+            query = query.in('terminal', terminalNames);
         }
     }
 
