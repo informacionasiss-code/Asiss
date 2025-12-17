@@ -33,7 +33,7 @@ Deno.serve(async (req: Request) => {
     return new Response('Invalid JSON', { status: 400, headers: corsHeaders });
   }
 
-  const { subject, body, audience, terminalCodes, manualRecipients, cc, attachments } = payload ?? {};
+  const { subject, body, audience, terminalCodes, manualRecipients, cc, attachments, module } = payload ?? {};
 
   if (!subject || !body || !audience) {
     return new Response('Missing required fields', { status: 400, headers: corsHeaders });
@@ -57,6 +57,7 @@ Deno.serve(async (req: Request) => {
     audience,
     terminalCodes,
     brandUrl,
+    module: module || 'asistencia',
   });
 
   // Build email payload for Resend

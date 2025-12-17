@@ -15,6 +15,7 @@ export interface EmailPayload {
   subject: string;
   body: string;
   attachments?: EmailAttachment[];
+  module?: 'asistencia' | 'credenciales' | 'informativos' | 'minicheck';
 }
 
 export interface EmailService {

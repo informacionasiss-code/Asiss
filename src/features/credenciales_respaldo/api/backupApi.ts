@@ -371,6 +371,68 @@ import { EmailAttachment } from '../../../shared/types/email';
 
 export type { EmailAttachment };
 
+// Professional SVG Icons for emails
+const EMAIL_ICONS = {
+    user: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="9" cy="5" r="3.5" stroke="#64748b" stroke-width="1.5"/>
+        <path d="M2 16C2 12.686 5.13401 10 9 10C12.866 10 16 12.686 16 16" stroke="#64748b" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>`,
+    id: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1.5" y="3.5" width="15" height="11" rx="2" stroke="#64748b" stroke-width="1.5"/>
+        <circle cx="6" cy="8" r="1.5" stroke="#64748b" stroke-width="1"/>
+        <path d="M4 12C4 10.8954 4.89543 10 6 10C7.10457 10 8 10.8954 8 12" stroke="#64748b" stroke-width="1"/>
+        <path d="M10.5 7.5H14.5M10.5 10H13" stroke="#64748b" stroke-width="1.2" stroke-linecap="round"/>
+    </svg>`,
+    building: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2 16V3.5C2 3.22386 2.22386 3 2.5 3H9.5C9.77614 3 10 3.22386 10 3.5V16" stroke="#64748b" stroke-width="1.5"/>
+        <path d="M10 7H14.5C14.7761 7 15 7.22386 15 7.5V16" stroke="#64748b" stroke-width="1.5"/>
+        <path d="M5 6H7M5 9H7M5 12H7M12 10H13M12 13H13" stroke="#64748b" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M1 16H17" stroke="#64748b" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>`,
+    calendar: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="3.5" width="14" height="12" rx="2" stroke="#64748b" stroke-width="1.5"/>
+        <path d="M2 7H16" stroke="#64748b" stroke-width="1.5"/>
+        <path d="M5.5 1.5V4.5M12.5 1.5V4.5" stroke="#64748b" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>`,
+    card: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="3" width="16" height="12" rx="2" stroke="#64748b" stroke-width="1.5"/>
+        <path d="M1 7H17" stroke="#64748b" stroke-width="1.5"/>
+        <path d="M4 11H8" stroke="#64748b" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>`,
+    warning: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 6V10M9 12.5V13" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M3 15L9 3L15 15H3Z" stroke="#f59e0b" stroke-width="1.5" stroke-linejoin="round"/>
+    </svg>`,
+    money: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="9" cy="9" r="7" stroke="#64748b" stroke-width="1.5"/>
+        <path d="M9 5V13M11 7H7.5C6.67157 7 6 7.67157 6 8.5C6 9.32843 6.67157 10 7.5 10H10.5C11.3284 10 12 10.6716 12 11.5C12 12.3284 11.3284 13 10.5 13H6" stroke="#64748b" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>`,
+    supervisor: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="9" cy="6" r="3" stroke="#64748b" stroke-width="1.5"/>
+        <path d="M3 16C3 13.2386 5.68629 11 9 11C12.3137 11 15 13.2386 15 16" stroke="#64748b" stroke-width="1.5"/>
+        <path d="M9 3L10 1.5L11 3" stroke="#f59e0b" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`,
+};
+
+const generateDataRow = (icon: string, label: string, value: string, highlight = false) => `
+    <tr>
+        <td style="padding: 14px 16px; border-bottom: 1px solid #e2e8f0; width: 40%; vertical-align: middle;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td style="padding-right: 12px; vertical-align: middle;">${icon}</td>
+                    <td style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">${label}</td>
+                </tr>
+            </table>
+        </td>
+        <td style="padding: 14px 16px; border-bottom: 1px solid #e2e8f0; font-size: 14px; font-weight: ${highlight ? '700' : '500'}; color: ${highlight ? '#0f172a' : '#334155'}; text-align: right;">${value}</td>
+    </tr>
+`;
+
+const formatDate = (date: string) => {
+    const d = new Date(date);
+    return d.toLocaleDateString('es-CL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+};
+
 export const sendBackupEmails = async (
     loan: BackupLoan,
     managerEmail: string,
@@ -379,34 +441,98 @@ export const sendBackupEmails = async (
 ): Promise<{ success: boolean; error?: string }> => {
     const cardNumber = loan.backup_cards?.card_number || 'N/A';
     const terminalName = loan.person_terminal;
-    const reasonText = loan.reason === 'PERDIDA' ? 'Perdida de Credencial' : 'Deterioro de Credencial';
-    const fechaEntrega = new Date(loan.issued_at).toLocaleDateString('es-CL', {
-        year: 'numeric', month: 'long', day: 'numeric'
-    });
+    const reasonText = loan.reason === 'PERDIDA' ? 'Pérdida de Credencial' : 'Deterioro de Credencial';
+    const fechaEntrega = formatDate(loan.issued_at);
 
     // Prepare attachments array if provided
     const attachments = attachment ? [attachment] : undefined;
 
+    // Get reason badge color
+    const reasonColor = loan.reason === 'PERDIDA' ? '#ef4444' : '#f59e0b';
+    const reasonBg = loan.reason === 'PERDIDA' ? '#fef2f2' : '#fffbeb';
+
     try {
-        // EMAIL 1: To manager (person who creates the new credential)
+        // =============================================
+        // EMAIL 1: To manager (Solicitud Nueva Credencial)
+        // =============================================
         const managerSubject = `Solicitud Nueva Credencial - ${loan.person_name}`;
         const managerBody = `
-SOLICITUD DE NUEVA CREDENCIAL
-
-Trabajador: ${loan.person_name}
-RUT: ${loan.person_rut}
-Terminal: ${terminalName}
-Cargo: ${loan.person_cargo || 'No especificado'}
-
-MOTIVO: ${reasonText}
-
-Tarjeta de respaldo asignada: ${cardNumber}
-Fecha de solicitud: ${loan.requested_at}
-Supervisor que entrego: ${loan.created_by_supervisor}
-
-Por favor proceder con la emision de una nueva credencial para este trabajador.
-${attachment ? '\n[ADJUNTO: Autorizacion de descuento firmada]' : ''}
-`.trim();
+            <!-- Status Banner -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 24px;">
+                <tr>
+                    <td style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 24px; text-align: center;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                            <tr>
+                                <td align="center" style="padding-bottom: 8px;">
+                                    <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="28" cy="28" r="26" fill="#dbeafe" stroke="#3b82f6" stroke-width="3"/>
+                                        <rect x="18" y="20" width="20" height="16" rx="2" stroke="#2563eb" stroke-width="2.5"/>
+                                        <circle cx="24" cy="27" r="3" stroke="#2563eb" stroke-width="2"/>
+                                        <path d="M20 33C20 31 21.5 29 24 29C26.5 29 28 31 28 33" stroke="#2563eb" stroke-width="2"/>
+                                        <path d="M31 25H35M31 29H34" stroke="#2563eb" stroke-width="2" stroke-linecap="round"/>
+                                    </svg>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td align="center">
+                                    <span style="font-size: 11px; font-weight: 700; color: #1e40af; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px;">Acción Requerida</span>
+                                    <span style="font-size: 20px; font-weight: 800; color: #1d4ed8; letter-spacing: -0.5px;">SOLICITUD DE NUEVA CREDENCIAL</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+            
+            <!-- Reason Badge -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 24px;">
+                <tr>
+                    <td align="center">
+                        <span style="display: inline-block; padding: 8px 20px; background: ${reasonBg}; border: 1px solid ${reasonColor}; border-radius: 100px; color: ${reasonColor}; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">${reasonText}</span>
+                    </td>
+                </tr>
+            </table>
+            
+            <!-- Worker Data Section -->
+            <p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Datos del Trabajador</p>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; border-spacing: 0; border-collapse: separate; margin-bottom: 24px;">
+                ${generateDataRow(EMAIL_ICONS.user, 'Nombre', loan.person_name, true)}
+                ${generateDataRow(EMAIL_ICONS.id, 'RUT', loan.person_rut)}
+                ${generateDataRow(EMAIL_ICONS.building, 'Terminal', terminalName)}
+                ${generateDataRow(EMAIL_ICONS.id, 'Cargo', loan.person_cargo || 'No especificado')}
+            </table>
+            
+            <!-- Backup Info Section -->
+            <p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Información del Respaldo</p>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; border-spacing: 0; border-collapse: separate; margin-bottom: 24px;">
+                ${generateDataRow(EMAIL_ICONS.card, 'Tarjeta Asignada', `N° ${cardNumber}`, true)}
+                ${generateDataRow(EMAIL_ICONS.calendar, 'Fecha Solicitud', loan.requested_at)}
+                ${generateDataRow(EMAIL_ICONS.supervisor, 'Supervisor Entrega', loan.created_by_supervisor)}
+            </table>
+            
+            <!-- Action Message -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 16px;">
+                <tr>
+                    <td style="padding: 20px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px;">
+                        <p style="margin: 0; font-size: 14px; color: #166534; font-weight: 600; text-align: center;">
+                            ✅ Por favor proceder con la emisión de una nueva credencial para este trabajador.
+                        </p>
+                    </td>
+                </tr>
+            </table>
+            
+            ${attachment ? `
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td style="padding: 12px 16px; background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px;">
+                        <p style="margin: 0; font-size: 13px; color: #92400e; font-weight: 500;">
+                            📎 <strong>Documento adjunto:</strong> Autorización de descuento firmada
+                        </p>
+                    </td>
+                </tr>
+            </table>
+            ` : ''}
+        `.trim();
 
         await emailService.sendEmail({
             audience: 'manual',
@@ -415,33 +541,100 @@ ${attachment ? '\n[ADJUNTO: Autorizacion de descuento firmada]' : ''}
             subject: managerSubject,
             body: managerBody,
             attachments,
+            module: 'credenciales',
         });
 
-        // EMAIL 2: To boss (notification about backup card)
-        const bossSubject = `Notificacion Credencial Respaldo - ${loan.person_name}`;
+        // =============================================
+        // EMAIL 2: To boss (Notificación Credencial Respaldo)
+        // =============================================
+        const bossSubject = `Notificación Credencial Respaldo - ${loan.person_name}`;
         const bossBody = `
-Estimado/a,
-
-Se le informa que el trabajador a su cargo utilizara una tarjeta de respaldo mientras se gestiona una nueva credencial.
-
-DATOS DEL TRABAJADOR:
-- Nombre: ${loan.person_name}
-- RUT: ${loan.person_rut}
-- Terminal: ${terminalName}
-- Cargo: ${loan.person_cargo || 'No especificado'}
-
-INFORMACION DEL RESPALDO:
-- Tarjeta asignada: N° ${cardNumber}
-- Motivo: ${reasonText}
-- Fecha de entrega: ${fechaEntrega}
-${loan.discount_applied ? `- Descuento aplicado: $${loan.discount_amount.toLocaleString('es-CL')} (1 cuota)` : ''}
-
-Una vez que el trabajador reciba su nueva credencial, debera devolver la tarjeta de respaldo.
-${attachment ? '\n[ADJUNTO: Autorizacion de descuento firmada]' : ''}
-
-Saludos cordiales,
-Gestion de Personal
-`.trim();
+            <!-- Status Banner -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 24px;">
+                <tr>
+                    <td style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 12px; padding: 24px; text-align: center;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                            <tr>
+                                <td align="center" style="padding-bottom: 8px;">
+                                    <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="28" cy="28" r="26" fill="#fef9c3" stroke="#eab308" stroke-width="3"/>
+                                        <path d="M28 18V32M28 36V38" stroke="#ca8a04" stroke-width="4" stroke-linecap="round"/>
+                                    </svg>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td align="center">
+                                    <span style="font-size: 11px; font-weight: 700; color: #92400e; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px;">Notificación Importante</span>
+                                    <span style="font-size: 18px; font-weight: 800; color: #b45309; letter-spacing: -0.5px;">CREDENCIAL DE RESPALDO ASIGNADA</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+            
+            <!-- Intro Message -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 24px;">
+                <tr>
+                    <td style="padding: 16px 20px; background: #f8fafc; border-radius: 12px;">
+                        <p style="margin: 0; font-size: 14px; color: #475569; line-height: 1.6;">
+                            Se le informa que el trabajador a su cargo <strong style="color: #0f172a;">${loan.person_name}</strong> utilizará una tarjeta de respaldo mientras se gestiona una nueva credencial.
+                        </p>
+                    </td>
+                </tr>
+            </table>
+            
+            <!-- Worker Data Section -->
+            <p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Datos del Trabajador</p>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; border-spacing: 0; border-collapse: separate; margin-bottom: 24px;">
+                ${generateDataRow(EMAIL_ICONS.user, 'Nombre', loan.person_name, true)}
+                ${generateDataRow(EMAIL_ICONS.id, 'RUT', loan.person_rut)}
+                ${generateDataRow(EMAIL_ICONS.building, 'Terminal', terminalName)}
+                ${generateDataRow(EMAIL_ICONS.id, 'Cargo', loan.person_cargo || 'No especificado')}
+            </table>
+            
+            <!-- Backup Info Section -->
+            <p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Información del Respaldo</p>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; border-spacing: 0; border-collapse: separate; margin-bottom: 24px;">
+                ${generateDataRow(EMAIL_ICONS.card, 'Tarjeta Asignada', `N° ${cardNumber}`, true)}
+                ${generateDataRow(EMAIL_ICONS.warning, 'Motivo', reasonText)}
+                ${generateDataRow(EMAIL_ICONS.calendar, 'Fecha de Entrega', fechaEntrega)}
+                ${loan.discount_applied ? generateDataRow(EMAIL_ICONS.money, 'Descuento Aplicado', `$${loan.discount_amount.toLocaleString('es-CL')} (1 cuota)`, true) : ''}
+            </table>
+            
+            <!-- Important Notice -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 16px;">
+                <tr>
+                    <td style="padding: 20px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px;">
+                        <p style="margin: 0; font-size: 14px; color: #1e40af; font-weight: 500; text-align: center;">
+                            ℹ️ Una vez que el trabajador reciba su nueva credencial, deberá devolver la tarjeta de respaldo.
+                        </p>
+                    </td>
+                </tr>
+            </table>
+            
+            ${attachment ? `
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 24px;">
+                <tr>
+                    <td style="padding: 12px 16px; background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px;">
+                        <p style="margin: 0; font-size: 13px; color: #92400e; font-weight: 500;">
+                            📎 <strong>Documento adjunto:</strong> Autorización de descuento firmada
+                        </p>
+                    </td>
+                </tr>
+            </table>
+            ` : ''}
+            
+            <!-- Signature -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td style="padding-top: 16px; border-top: 1px solid #e2e8f0;">
+                        <p style="margin: 0; font-size: 14px; color: #64748b;">Saludos cordiales,</p>
+                        <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 700; color: #0f172a;">Gestión de Personal</p>
+                    </td>
+                </tr>
+            </table>
+        `.trim();
 
         await emailService.sendEmail({
             audience: 'manual',
@@ -449,6 +642,7 @@ Gestion de Personal
             subject: bossSubject,
             body: bossBody,
             attachments,
+            module: 'credenciales',
         });
 
         // Mark emails as sent

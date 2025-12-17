@@ -5,6 +5,7 @@ interface EmailTemplateInput {
   terminalCodes?: string[];
   brandUrl?: string;
   accentColor?: string;
+  module?: 'asistencia' | 'credenciales' | 'informativos' | 'minicheck';
 }
 
 // SVG Icons as inline base64 or direct SVG
@@ -71,6 +72,7 @@ export const renderEmailTemplate = ({
   terminalCodes,
   brandUrl = 'https://iag-lol.github.io/Asiss',
   accentColor = '#2563eb',
+  module = 'asistencia',
 }: EmailTemplateInput) => {
   const terminals = terminalCodes?.length ? terminalCodes.join(', ') : 'Todos';
   const year = new Date().getFullYear();
@@ -79,6 +81,15 @@ export const renderEmailTemplate = ({
     dateStyle: 'full',
     timeStyle: 'short'
   });
+
+  // Module-based configuration
+  const moduleConfig = {
+    asistencia: { name: 'Sistema Asistencia', button: 'Ir al Panel de Asistencia', color: '#2563eb' },
+    credenciales: { name: 'Gestión Credenciales', button: 'Ir a Credenciales', color: '#7c3aed' },
+    informativos: { name: 'Informativos', button: 'Ir a Informativos', color: '#0891b2' },
+    minicheck: { name: 'MiniCheck', button: 'Ir a MiniCheck', color: '#059669' },
+  };
+  const config = moduleConfig[module] || moduleConfig.asistencia;
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -140,7 +151,7 @@ export const renderEmailTemplate = ({
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                       <tr>
                         <td align="center">
-                          <span style="display: inline-block; padding: 6px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 100px; color: #64748b; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">Notificación Sistema</span>
+                          <span style="display: inline-block; padding: 6px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 100px; color: #64748b; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">${config.name}</span>
                         </td>
                       </tr>
                       <tr>
@@ -197,8 +208,8 @@ export const renderEmailTemplate = ({
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top: 32px;">
                       <tr>
                         <td align="center">
-                          <a href="${brandUrl}" style="display: inline-block; padding: 14px 32px; background: #0f172a; color: #ffffff !important; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 14px; transition: transform 0.2s;">
-                            Ir al Panel de Asistencia
+                          <a href="${brandUrl}" style="display: inline-block; padding: 14px 32px; background: ${config.color}; color: #ffffff !important; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 14px; transition: transform 0.2s;">
+                            ${config.button}
                           </a>
                         </td>
                       </tr>
