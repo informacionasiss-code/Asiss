@@ -12,7 +12,7 @@ import { AsistenciaPage } from '../../features/asistencia/AsistenciaPage';
 import { AseoInteriorPage } from '../../features/aseo/sections/AseoInteriorPage';
 import { AseoExteriorPage } from '../../features/aseo/sections/AseoExteriorPage';
 import { AseoRodilloPage } from '../../features/aseo/sections/AseoRodilloPage';
-import { CredencialesPage } from '../../features/credenciales/CredencialesPage';
+import { CredencialesRespaldoPage } from '../../features/credenciales_respaldo/CredencialesRespaldoPage';
 import { SolicitudesPage } from '../../features/solicitudes/SolicitudesPage';
 import { MiniCheckExtintorPage } from '../../features/minicheck/sections/MiniCheckExtintorPage';
 import { MiniCheckTagPage } from '../../features/minicheck/sections/MiniCheckTagPage';
@@ -55,7 +55,7 @@ export const AppRouter = () => (
           <Route path="/aseo/interior" element={<AseoInteriorPage />} />
           <Route path="/aseo/exterior" element={<AseoExteriorPage />} />
           <Route path="/aseo/rodillo" element={<AseoRodilloPage />} />
-          <Route path="/credenciales" element={<CredencialesPage />} />
+          <Route path="/credenciales" element={<CredencialesRespaldoPage />} />
           <Route path="/solicitudes" element={<SolicitudesPage />} />
           <Route path="/minicheck/extintor" element={<MiniCheckExtintorPage />} />
           <Route path="/minicheck/tag" element={<MiniCheckTagPage />} />

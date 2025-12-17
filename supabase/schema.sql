@@ -279,3 +279,119 @@ CREATE POLICY "Allow all for autorizaciones" ON attendance_autorizaciones FOR AL
 -- Bucket name: attendance-docs
 -- Public: false
 -- =============================================
+
+-- =============================================
+-- SECTION: CREDENCIALES DE RESPALDO
+-- Control de préstamo de tarjetas de respaldo
+-- =============================================
+
+-- Enums para estados
+CREATE TYPE backup_card_status_enum AS ENUM ('LIBRE', 'ASIGNADA', 'INACTIVA');
+CREATE TYPE backup_loan_status_enum AS ENUM ('ASIGNADA', 'RECUPERADA', 'CERRADA', 'CANCELADA');
+CREATE TYPE backup_reason_enum AS ENUM ('PERDIDA', 'DETERIORO');
+
+-- Tabla: Inventario de tarjetas de respaldo
+CREATE TABLE backup_cards (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  card_number TEXT UNIQUE NOT NULL,
+  inventory_terminal TEXT NOT NULL CHECK (inventory_terminal IN ('El Roble', 'La Reina', 'Maria Angelica')),
+  status backup_card_status_enum NOT NULL DEFAULT 'LIBRE',
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_backup_cards_terminal_status ON backup_cards(inventory_terminal, status);
+
+CREATE TRIGGER update_backup_cards_updated_at
+  BEFORE UPDATE ON backup_cards
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Tabla: Préstamos de tarjetas de respaldo
+CREATE TABLE backup_loans (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  card_id UUID NOT NULL REFERENCES backup_cards(id),
+  -- Datos de la persona (independiente de tabla Personal)
+  person_rut TEXT NOT NULL,
+  person_name TEXT NOT NULL,
+  person_cargo TEXT,
+  person_terminal TEXT NOT NULL,
+  person_turno TEXT,
+  person_horario TEXT,
+  person_contacto TEXT,
+  boss_email TEXT NOT NULL,
+  -- Solicitud
+  reason backup_reason_enum NOT NULL,
+  requested_at DATE NOT NULL DEFAULT CURRENT_DATE,
+  issued_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  -- Tiempos esperados y alertas
+  expected_return_days INT NOT NULL DEFAULT 3,
+  alert_after_days INT NOT NULL DEFAULT 7,
+  -- Estado del préstamo
+  status backup_loan_status_enum NOT NULL DEFAULT 'ASIGNADA',
+  recovered_at TIMESTAMPTZ,
+  closed_at TIMESTAMPTZ,
+  cancel_reason TEXT,
+  -- Descuento
+  discount_amount INT NOT NULL DEFAULT 5000,
+  discount_applied BOOLEAN NOT NULL DEFAULT true,
+  discount_evidence_path TEXT,
+  -- Auditoría
+  created_by_supervisor TEXT NOT NULL,
+  emails_sent_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Índice único parcial: Una tarjeta solo puede tener UN préstamo activo (ASIGNADA)
+CREATE UNIQUE INDEX idx_backup_loans_active_card ON backup_loans(card_id) WHERE status = 'ASIGNADA';
+
+-- Índices para consultas frecuentes
+CREATE INDEX idx_backup_loans_person_rut ON backup_loans(person_rut);
+CREATE INDEX idx_backup_loans_terminal_status ON backup_loans(person_terminal, status, issued_at DESC);
+CREATE INDEX idx_backup_loans_status_issued ON backup_loans(status, issued_at DESC);
+CREATE INDEX idx_backup_loans_issued ON backup_loans(issued_at DESC);
+
+CREATE TRIGGER update_backup_loans_updated_at
+  BEFORE UPDATE ON backup_loans
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Tabla: Configuración de correos
+CREATE TABLE backup_email_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  scope_type TEXT NOT NULL CHECK (scope_type IN ('GLOBAL', 'TERMINAL')),
+  scope_code TEXT NOT NULL,
+  manager_email TEXT NOT NULL,
+  cc_emails TEXT,
+  subject_manager TEXT NOT NULL DEFAULT 'Solicitud de Nueva Credencial',
+  subject_boss TEXT NOT NULL DEFAULT 'Notificación de Credencial de Respaldo',
+  enabled BOOLEAN NOT NULL DEFAULT true,
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(scope_type, scope_code)
+);
+
+CREATE TRIGGER update_backup_email_settings_updated_at
+  BEFORE UPDATE ON backup_email_settings
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Enable Realtime
+ALTER PUBLICATION supabase_realtime ADD TABLE backup_cards;
+ALTER PUBLICATION supabase_realtime ADD TABLE backup_loans;
+
+-- RLS (permisivo para desarrollo)
+ALTER TABLE backup_cards ENABLE ROW LEVEL SECURITY;
+ALTER TABLE backup_loans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE backup_email_settings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all for backup_cards" ON backup_cards FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for backup_loans" ON backup_loans FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for backup_email_settings" ON backup_email_settings FOR ALL USING (true) WITH CHECK (true);
+
+-- =============================================
+-- STORAGE: Create bucket for backup evidence
+-- Bucket name: backup-evidence
+-- Public: false
+-- =============================================

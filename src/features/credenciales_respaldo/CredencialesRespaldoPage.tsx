@@ -1,0 +1,432 @@
+import { useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Plus, CreditCard, Settings, Download, Filter, AlertTriangle } from 'lucide-react';
+import { PageHeader } from '../../shared/components/common/PageHeader';
+import { LoadingState } from '../../shared/components/common/LoadingState';
+import { ErrorState } from '../../shared/components/common/ErrorState';
+import { useTerminalStore } from '../../shared/state/terminalStore';
+import { terminalOptions } from '../../shared/utils/terminal';
+import { exportToXlsx } from '../../shared/utils/exportToXlsx';
+import { KpiCards } from './components/KpiCards';
+import { ChartsPanel } from './components/ChartsPanel';
+import { LoansTable } from './components/LoansTable';
+import { LoanFormModal } from './components/LoanFormModal';
+import { LoanDetailModal } from './components/LoanDetailModal';
+import { RecoverModal } from './components/RecoverModal';
+import { CancelModal } from './components/CancelModal';
+import { CardsInventoryModal } from './components/CardsInventoryModal';
+import { EmailSettingsModal } from './components/EmailSettingsModal';
+import {
+    fetchLoans,
+    fetchKpis,
+    fetchEmailSettings,
+    createLoan,
+    recoverLoan,
+    cancelLoan,
+    sendBackupEmails,
+} from './api/backupApi';
+import {
+    BackupLoan,
+    BackupLoansFilters,
+    LoanFormValues,
+    STATUS_OPTIONS,
+    REASON_OPTIONS,
+} from './types';
+import { formatRut } from './utils/rut';
+import { useSessionStore } from '../../shared/state/sessionStore';
+
+export const CredencialesRespaldoPage = () => {
+    const queryClient = useQueryClient();
+    const terminalContext = useTerminalStore((state) => state.context);
+    const setTerminalContext = useTerminalStore((state) => state.setContext);
+    const session = useSessionStore((state) => state.session);
+
+    // Filters
+    const [filters, setFilters] = useState<BackupLoansFilters>({
+        status: 'TODAS',
+        reason: 'TODAS',
+        alertsOnly: false,
+    });
+
+    // Modals
+    const [showNewLoanModal, setShowNewLoanModal] = useState(false);
+    const [showCardsModal, setShowCardsModal] = useState(false);
+    const [showEmailSettingsModal, setShowEmailSettingsModal] = useState(false);
+    const [selectedLoan, setSelectedLoan] = useState<BackupLoan | null>(null);
+    const [showDetailModal, setShowDetailModal] = useState(false);
+    const [showRecoverModal, setShowRecoverModal] = useState(false);
+    const [showCancelModal, setShowCancelModal] = useState(false);
+
+    // Queries
+    const loansQuery = useQuery({
+        queryKey: ['backup-loans', filters],
+        queryFn: () => fetchLoans(filters),
+    });
+
+    const kpisQuery = useQuery({
+        queryKey: ['backup-kpis'],
+        queryFn: fetchKpis,
+    });
+
+    const emailSettingsQuery = useQuery({
+        queryKey: ['backup-email-settings'],
+        queryFn: fetchEmailSettings,
+    });
+
+    // Mutations
+    const createLoanMutation = useMutation({
+        mutationFn: async (values: LoanFormValues) => {
+            const loan = await createLoan(values);
+            // Send emails if enabled
+            if (values.send_emails) {
+                const settings = emailSettingsQuery.data?.find(
+                    (s) => s.scope_code === values.person_terminal || s.scope_type === 'GLOBAL'
+                );
+                if (settings) {
+                    await sendBackupEmails(loan, settings.manager_email, settings.cc_emails || undefined);
+                }
+            }
+            return loan;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['backup-loans'] });
+            queryClient.invalidateQueries({ queryKey: ['backup-kpis'] });
+            queryClient.invalidateQueries({ queryKey: ['backup-cards'] });
+            setShowNewLoanModal(false);
+        },
+    });
+
+    const recoverMutation = useMutation({
+        mutationFn: ({ id, recoveredAt, observation }: { id: string; recoveredAt: string; observation?: string }) =>
+            recoverLoan(id, recoveredAt, observation),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['backup-loans'] });
+            queryClient.invalidateQueries({ queryKey: ['backup-kpis'] });
+            queryClient.invalidateQueries({ queryKey: ['backup-cards'] });
+            setShowRecoverModal(false);
+            setSelectedLoan(null);
+        },
+    });
+
+    const cancelMutation = useMutation({
+        mutationFn: ({ id, reason }: { id: string; reason: string }) => cancelLoan(id, reason),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['backup-loans'] });
+            queryClient.invalidateQueries({ queryKey: ['backup-kpis'] });
+            queryClient.invalidateQueries({ queryKey: ['backup-cards'] });
+            setShowCancelModal(false);
+            setSelectedLoan(null);
+        },
+    });
+
+    // Filter loans by terminal context if not ALL
+    const filteredLoans = useMemo(() => {
+        let loans = loansQuery.data || [];
+
+        if (terminalContext.mode !== 'ALL' && terminalContext.value) {
+            const terminalName = terminalOptions.find((t) => t.value === terminalContext.value)?.label;
+            if (terminalName) {
+                loans = loans.filter((l) => l.person_terminal === terminalContext.value || l.person_terminal === terminalName);
+            }
+        }
+
+        if (filters.alertsOnly) {
+            const now = new Date();
+            loans = loans.filter((l) => {
+                if (l.status !== 'ASIGNADA') return false;
+                const issuedAt = new Date(l.issued_at);
+                const daysPassed = Math.floor((now.getTime() - issuedAt.getTime()) / (1000 * 60 * 60 * 24));
+                return daysPassed > l.alert_after_days;
+            });
+        }
+
+        return loans;
+    }, [loansQuery.data, terminalContext, filters.alertsOnly]);
+
+    // Handlers
+    const handleView = (loan: BackupLoan) => {
+        setSelectedLoan(loan);
+        setShowDetailModal(true);
+    };
+
+    const handleEdit = (loan: BackupLoan) => {
+        // For now, just view - edit can be added later
+        handleView(loan);
+    };
+
+    const handleRecover = (loan: BackupLoan) => {
+        setSelectedLoan(loan);
+        setShowRecoverModal(true);
+    };
+
+    const handleCancel = (loan: BackupLoan) => {
+        setSelectedLoan(loan);
+        setShowCancelModal(true);
+    };
+
+    const handleResendEmails = async (loan: BackupLoan) => {
+        const settings = emailSettingsQuery.data?.find(
+            (s) => s.scope_code === loan.person_terminal || s.scope_type === 'GLOBAL'
+        );
+        if (settings) {
+            try {
+                await sendBackupEmails(loan, settings.manager_email, settings.cc_emails || undefined);
+                alert('Correos reenviados correctamente');
+            } catch (error) {
+                alert('Error al reenviar correos');
+            }
+        } else {
+            alert('Configure los correos primero');
+        }
+    };
+
+    const handleExport = () => {
+        if (!filteredLoans.length) return;
+
+        const now = new Date();
+        const exportData = filteredLoans.map((loan) => {
+            const issuedAt = new Date(loan.issued_at);
+            const daysPassed = Math.floor((now.getTime() - issuedAt.getTime()) / (1000 * 60 * 60 * 24));
+            return {
+                rut: formatRut(loan.person_rut),
+                nombre: loan.person_name,
+                cargo: loan.person_cargo || '',
+                terminal: loan.person_terminal,
+                tarjeta: loan.backup_cards?.card_number || '',
+                motivo: loan.reason === 'PERDIDA' ? 'Perdida' : 'Deterioro',
+                fecha_entrega: new Date(loan.issued_at).toLocaleDateString('es-CL'),
+                dias: daysPassed,
+                estado: loan.status,
+                descuento: loan.discount_applied ? loan.discount_amount : 0,
+                email_jefatura: loan.boss_email,
+                creado_por: loan.created_by_supervisor,
+            };
+        });
+
+        exportToXlsx({
+            filename: `prestamos_respaldo_${new Date().toISOString().split('T')[0]}`,
+            sheetName: 'Prestamos',
+            rows: exportData,
+            columns: [
+                { key: 'rut', header: 'RUT' },
+                { key: 'nombre', header: 'Nombre' },
+                { key: 'cargo', header: 'Cargo' },
+                { key: 'terminal', header: 'Terminal' },
+                { key: 'tarjeta', header: 'Tarjeta' },
+                { key: 'motivo', header: 'Motivo' },
+                { key: 'fecha_entrega', header: 'Fecha Entrega' },
+                { key: 'dias', header: 'Dias' },
+                { key: 'estado', header: 'Estado' },
+                { key: 'descuento', header: 'Descuento' },
+                { key: 'email_jefatura', header: 'Email Jefatura' },
+                { key: 'creado_por', header: 'Creado Por' },
+            ],
+        });
+    };
+
+    return (
+        <div className="space-y-6">
+            <PageHeader
+                title="Credenciales de Respaldo"
+                description="Control de prestamo de tarjetas de respaldo"
+                actions={
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            onClick={() => setShowEmailSettingsModal(true)}
+                            className="btn btn-secondary flex items-center gap-2"
+                        >
+                            <Settings className="w-4 h-4" />
+                            <span className="hidden sm:inline">Correos</span>
+                        </button>
+                        <button
+                            onClick={() => setShowCardsModal(true)}
+                            className="btn btn-secondary flex items-center gap-2"
+                        >
+                            <CreditCard className="w-4 h-4" />
+                            <span className="hidden sm:inline">Tarjetas</span>
+                        </button>
+                        <button onClick={handleExport} className="btn btn-secondary flex items-center gap-2">
+                            <Download className="w-4 h-4" />
+                            <span className="hidden sm:inline">XLSX</span>
+                        </button>
+                        <button
+                            onClick={() => setShowNewLoanModal(true)}
+                            className="btn btn-primary flex items-center gap-2"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Nuevo Prestamo
+                        </button>
+                    </div>
+                }
+            />
+
+            {/* KPIs */}
+            <KpiCards kpis={kpisQuery.data || {
+                availableByTerminal: { 'El Roble': 0, 'La Reina': 0, 'Maria Angelica': 0 },
+                activeLoans: 0,
+                overdueLoans: 0,
+                avgReturnDays: 0,
+                totalDiscounts: 0,
+            }} isLoading={kpisQuery.isLoading} />
+
+            {/* Charts */}
+            {!loansQuery.isLoading && loansQuery.data && loansQuery.data.length > 0 && (
+                <ChartsPanel loans={loansQuery.data} />
+            )}
+
+            {/* Filters */}
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <Filter className="w-4 h-4" />
+                        Filtros:
+                    </div>
+
+                    <input
+                        type="text"
+                        className="input w-auto min-w-[180px]"
+                        placeholder="Buscar RUT o nombre..."
+                        value={filters.search || ''}
+                        onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+                    />
+
+                    <select
+                        className="input w-auto"
+                        value={terminalContext.value || ''}
+                        onChange={(e) => {
+                            if (e.target.value) {
+                                setTerminalContext({ mode: 'TERMINAL', value: e.target.value as any });
+                            } else {
+                                setTerminalContext({ mode: 'ALL' });
+                            }
+                        }}
+                    >
+                        <option value="">Todos los terminales</option>
+                        {terminalOptions.map((t) => (
+                            <option key={t.value} value={t.value}>{t.label}</option>
+                        ))}
+                    </select>
+
+                    <select
+                        className="input w-auto"
+                        value={filters.status || 'TODAS'}
+                        onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value as any }))}
+                    >
+                        <option value="TODAS">Todos los estados</option>
+                        {STATUS_OPTIONS.map((s) => (
+                            <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
+                    </select>
+
+                    <select
+                        className="input w-auto"
+                        value={filters.reason || 'TODAS'}
+                        onChange={(e) => setFilters((prev) => ({ ...prev, reason: e.target.value as any }))}
+                    >
+                        <option value="TODAS">Todos los motivos</option>
+                        {REASON_OPTIONS.map((r) => (
+                            <option key={r.value} value={r.value}>{r.label}</option>
+                        ))}
+                    </select>
+
+                    <label className="flex items-center gap-2 cursor-pointer text-sm">
+                        <input
+                            type="checkbox"
+                            checked={filters.alertsOnly || false}
+                            onChange={(e) => setFilters((prev) => ({ ...prev, alertsOnly: e.target.checked }))}
+                            className="w-4 h-4 rounded border-slate-300"
+                        />
+                        <AlertTriangle className="w-4 h-4 text-amber-500" />
+                        Solo atrasados
+                    </label>
+
+                    <input
+                        type="date"
+                        className="input w-auto"
+                        value={filters.dateFrom || ''}
+                        onChange={(e) => setFilters((prev) => ({ ...prev, dateFrom: e.target.value }))}
+                        placeholder="Desde"
+                    />
+
+                    <input
+                        type="date"
+                        className="input w-auto"
+                        value={filters.dateTo || ''}
+                        onChange={(e) => setFilters((prev) => ({ ...prev, dateTo: e.target.value }))}
+                        placeholder="Hasta"
+                    />
+                </div>
+            </div>
+
+            {/* Table */}
+            {loansQuery.isLoading && <LoadingState label="Cargando prestamos..." />}
+            {loansQuery.isError && <ErrorState message="Error al cargar prestamos" onRetry={loansQuery.refetch} />}
+            {!loansQuery.isLoading && !loansQuery.isError && (
+                <LoansTable
+                    loans={filteredLoans}
+                    onView={handleView}
+                    onEdit={handleEdit}
+                    onRecover={handleRecover}
+                    onCancel={handleCancel}
+                    onResendEmails={handleResendEmails}
+                />
+            )}
+
+            {/* Modals */}
+            <LoanFormModal
+                isOpen={showNewLoanModal}
+                onClose={() => setShowNewLoanModal(false)}
+                onSubmit={async (values) => {
+                    await createLoanMutation.mutateAsync(values);
+                }}
+                isLoading={createLoanMutation.isPending}
+                supervisorName={session?.supervisorName || 'Supervisor'}
+            />
+
+            <LoanDetailModal
+                isOpen={showDetailModal}
+                loan={selectedLoan}
+                onClose={() => {
+                    setShowDetailModal(false);
+                    setSelectedLoan(null);
+                }}
+            />
+
+            <RecoverModal
+                isOpen={showRecoverModal}
+                loan={selectedLoan}
+                onClose={() => {
+                    setShowRecoverModal(false);
+                    setSelectedLoan(null);
+                }}
+                onSubmit={async (id, recoveredAt, observation) => {
+                    await recoverMutation.mutateAsync({ id, recoveredAt, observation });
+                }}
+                isLoading={recoverMutation.isPending}
+            />
+
+            <CancelModal
+                isOpen={showCancelModal}
+                loan={selectedLoan}
+                onClose={() => {
+                    setShowCancelModal(false);
+                    setSelectedLoan(null);
+                }}
+                onSubmit={async (id, reason) => {
+                    await cancelMutation.mutateAsync({ id, reason });
+                }}
+                isLoading={cancelMutation.isPending}
+            />
+
+            <CardsInventoryModal
+                isOpen={showCardsModal}
+                onClose={() => setShowCardsModal(false)}
+            />
+
+            <EmailSettingsModal
+                isOpen={showEmailSettingsModal}
+                onClose={() => setShowEmailSettingsModal(false)}
+            />
+        </div>
+    );
+};
