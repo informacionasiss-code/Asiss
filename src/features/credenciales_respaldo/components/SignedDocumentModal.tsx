@@ -7,7 +7,7 @@ interface Props {
     isOpen: boolean;
     loan: BackupLoan | null;
     managerEmail: string;
-    bossEmail: string;
+    workerEmail?: string;
     cc?: string;
     onClose: () => void;
     onSubmit: (attachment: { filename: string; content: string } | null) => Promise<void>;
@@ -18,7 +18,7 @@ export const SignedDocumentModal = ({
     isOpen,
     loan,
     managerEmail,
-    bossEmail,
+    workerEmail,
     cc,
     onClose,
     onSubmit,
@@ -113,11 +113,11 @@ export const SignedDocumentModal = ({
                                 <strong>Trabajador:</strong> {loan.person_name} ({formatRut(loan.person_rut)})
                             </p>
                             <p className="text-sm text-blue-800 mt-1">
-                                <strong>Se enviaran correos a:</strong>
+                                <strong>Se enviará correo a:</strong>
                             </p>
                             <ul className="text-xs text-blue-700 mt-1 list-disc list-inside">
-                                <li>Gestor: {managerEmail}</li>
-                                <li>Jefatura: {bossEmail}</li>
+                                <li>Gestor de credenciales: {managerEmail} <span className="text-blue-500">(con adjunto)</span></li>
+                                {workerEmail && <li>Notificación trabajador: {workerEmail}</li>}
                                 {cc && <li>CC: {cc}</li>}
                             </ul>
                         </div>
@@ -128,8 +128,8 @@ export const SignedDocumentModal = ({
                             <div>
                                 <p className="text-sm font-medium text-amber-800">Importante</p>
                                 <p className="text-xs text-amber-700">
-                                    Adjunte el documento de autorizacion de descuento firmado por el trabajador.
-                                    Este se enviara como adjunto en ambos correos.
+                                    Adjunte el documento de autorización de descuento firmado por el trabajador.
+                                    Este se enviará SOLO al gestor de credenciales.
                                 </p>
                             </div>
                         </div>

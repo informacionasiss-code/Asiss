@@ -31,7 +31,7 @@ export interface BackupLoan {
     person_turno?: string | null;
     person_horario?: string | null;
     person_contacto?: string | null;
-    boss_email: string;
+    worker_email?: string | null;
     reason: BackupReason;
     requested_at: string;
     issued_at: string;
@@ -75,7 +75,7 @@ export interface LoanFormValues {
     person_turno: string;
     person_horario: string;
     person_contacto: string;
-    boss_email: string;
+    worker_email?: string;
     // Request
     reason: BackupReason;
     requested_at: string;

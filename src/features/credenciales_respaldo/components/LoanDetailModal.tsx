@@ -131,9 +131,9 @@ export const LoanDetailModal = ({ isOpen, loan, onClose }: Props) => {
                                 <div className="flex justify-between">
                                     <span className="text-sm text-slate-500">Estado:</span>
                                     <span className={`text-sm font-medium px-2 py-0.5 rounded ${loan.status === 'ASIGNADA' ? 'bg-blue-100 text-blue-700' :
-                                            loan.status === 'CERRADA' ? 'bg-slate-100 text-slate-700' :
-                                                loan.status === 'CANCELADA' ? 'bg-red-100 text-red-700' :
-                                                    'bg-emerald-100 text-emerald-700'
+                                        loan.status === 'CERRADA' ? 'bg-slate-100 text-slate-700' :
+                                            loan.status === 'CANCELADA' ? 'bg-red-100 text-red-700' :
+                                                'bg-emerald-100 text-emerald-700'
                                         }`}>
                                         {loan.status}
                                     </span>
@@ -193,8 +193,8 @@ export const LoanDetailModal = ({ isOpen, loan, onClose }: Props) => {
                                     <span className="text-sm text-slate-900">{formatDate(loan.created_at)}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-slate-500">Email Jefatura:</span>
-                                    <span className="text-sm text-slate-900">{loan.boss_email}</span>
+                                    <span className="text-sm text-slate-500">Correo Trabajador:</span>
+                                    <span className="text-sm text-slate-900">{loan.worker_email || '-'}</span>
                                 </div>
                                 {loan.emails_sent_at && (
                                     <div className="flex justify-between">

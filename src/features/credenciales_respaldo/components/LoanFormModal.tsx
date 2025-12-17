@@ -25,7 +25,7 @@ export const LoanFormModal = ({ isOpen, onClose, onSubmit, isLoading, supervisor
         person_turno: '',
         person_horario: '',
         person_contacto: '',
-        boss_email: '',
+        worker_email: '',
         reason: 'PERDIDA',
         requested_at: new Date().toISOString().split('T')[0],
         card_id: '',
@@ -84,6 +84,12 @@ export const LoanFormModal = ({ isOpen, onClose, onSubmit, isLoading, supervisor
             setRutError('RUT invalido');
             return;
         }
+
+        // Auto-print discount form if discount is applied
+        if (form.discount_applied) {
+            handlePrint();
+        }
+
         await onSubmit(form);
     };
 
@@ -522,7 +528,7 @@ export const LoanFormModal = ({ isOpen, onClose, onSubmit, isLoading, supervisor
                 person_turno: '',
                 person_horario: '',
                 person_contacto: '',
-                boss_email: '',
+                worker_email: '',
                 reason: 'PERDIDA',
                 requested_at: new Date().toISOString().split('T')[0],
                 card_id: '',
@@ -632,13 +638,13 @@ export const LoanFormModal = ({ isOpen, onClose, onSubmit, isLoading, supervisor
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-600 mb-1">Email Jefatura</label>
+                                    <label className="block text-sm font-medium text-slate-600 mb-1">Correo <span className="text-slate-400 font-normal">(opcional)</span></label>
                                     <input
                                         type="email"
                                         className="input"
-                                        value={form.boss_email}
-                                        onChange={(e) => setForm((prev) => ({ ...prev, boss_email: e.target.value }))}
-                                        required
+                                        value={form.worker_email}
+                                        onChange={(e) => setForm((prev) => ({ ...prev, worker_email: e.target.value }))}
+                                        placeholder="Para notificar cuando llegue su credencial"
                                     />
                                 </div>
                             </div>
@@ -732,15 +738,10 @@ export const LoanFormModal = ({ isOpen, onClose, onSubmit, isLoading, supervisor
                                     </span>
                                 </label>
                                 {form.discount_applied && (
-                                    <button
-                                        type="button"
-                                        onClick={handlePrint}
-                                        className="btn btn-secondary flex items-center gap-2"
-                                        disabled={!form.person_name || !form.person_rut}
-                                    >
-                                        <Printer className="w-4 h-4" />
-                                        Imprimir Formulario
-                                    </button>
+                                    <span className="text-xs text-slate-500 italic flex items-center gap-1">
+                                        <Printer className="w-3 h-3" />
+                                        Se imprimirá automáticamente al crear
+                                    </span>
                                 )}
                             </div>
                         </div>
