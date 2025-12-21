@@ -43,6 +43,13 @@ const NAVIGATION: NavSection[] = [
     ],
   },
   {
+    label: 'Insumos',
+    icon: 'package',
+    items: [
+      { label: 'Solicitudes', to: '/insumos', icon: 'file-text' },
+    ],
+  },
+  {
     label: 'MiniCheck',
     icon: 'check-circle',
     items: [

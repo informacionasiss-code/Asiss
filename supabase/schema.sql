@@ -395,3 +395,158 @@ CREATE POLICY "Allow all for backup_email_settings" ON backup_email_settings FOR
 -- Bucket name: backup-evidence
 -- Public: false
 -- =============================================
+
+-- =============================================
+-- SECTION: SOLICITUDES INTELIGENTES DE INSUMOS
+-- Gestion de insumos, solicitudes, y entregas
+-- =============================================
+
+-- Tabla: Catalogo de insumos
+CREATE TABLE supplies (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  unit TEXT NOT NULL,
+  life_days INT,
+  min_stock INT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_supplies_name ON supplies(name);
+
+-- Tabla: Perfiles de consumo por ubicacion y periodo
+CREATE TABLE supply_consumption_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  location_type TEXT NOT NULL CHECK (location_type IN ('TERMINAL', 'CABEZAL')),
+  location_name TEXT NOT NULL,
+  period TEXT NOT NULL CHECK (period IN ('DAY', 'NIGHT', 'WEEKEND')),
+  supply_id UUID NOT NULL REFERENCES supplies(id) ON DELETE CASCADE,
+  quantity INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(location_type, location_name, period, supply_id)
+);
+
+CREATE INDEX idx_consumption_profiles_location ON supply_consumption_profiles(location_type, location_name);
+
+CREATE TRIGGER update_consumption_profiles_updated_at
+  BEFORE UPDATE ON supply_consumption_profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Tabla: Solicitudes de insumos
+CREATE TABLE supply_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  terminal TEXT NOT NULL,
+  request_type TEXT NOT NULL CHECK (request_type IN ('SEMANA', 'FIN_SEMANA', 'EXTRA')),
+  status TEXT NOT NULL CHECK (status IN ('PENDIENTE', 'RETIRADO')) DEFAULT 'PENDIENTE',
+  receipt_path TEXT,
+  requested_at TIMESTAMPTZ DEFAULT now(),
+  retrieved_at TIMESTAMPTZ,
+  created_by TEXT NOT NULL,
+  consumption_snapshot JSONB,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_supply_requests_terminal ON supply_requests(terminal);
+CREATE INDEX idx_supply_requests_status ON supply_requests(status);
+CREATE INDEX idx_supply_requests_date ON supply_requests(requested_at DESC);
+
+CREATE TRIGGER update_supply_requests_updated_at
+  BEFORE UPDATE ON supply_requests
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Tabla: Items de cada solicitud
+CREATE TABLE supply_request_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_id UUID NOT NULL REFERENCES supply_requests(id) ON DELETE CASCADE,
+  supply_id UUID NOT NULL REFERENCES supplies(id),
+  quantity INT NOT NULL DEFAULT 0,
+  is_extra BOOLEAN DEFAULT false
+);
+
+CREATE INDEX idx_request_items_request ON supply_request_items(request_id);
+
+-- Tabla: Entregas a personal (cleaners)
+CREATE TABLE supply_deliveries (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  supply_id UUID NOT NULL REFERENCES supplies(id),
+  staff_rut TEXT NOT NULL,
+  staff_name TEXT NOT NULL,
+  quantity INT NOT NULL,
+  delivered_at TIMESTAMPTZ DEFAULT now(),
+  next_delivery_at TIMESTAMPTZ,
+  notes TEXT,
+  created_by TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_supply_deliveries_staff ON supply_deliveries(staff_rut);
+CREATE INDEX idx_supply_deliveries_supply ON supply_deliveries(supply_id);
+CREATE INDEX idx_supply_deliveries_next ON supply_deliveries(next_delivery_at);
+
+-- Tabla: Configuracion de correos automaticos
+CREATE TABLE supply_email_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  trigger TEXT NOT NULL CHECK (trigger IN ('MONDAY', 'FRIDAY', 'MANUAL')),
+  recipients TEXT NOT NULL,
+  subject TEXT NOT NULL DEFAULT 'Solicitud de Insumos',
+  body TEXT NOT NULL DEFAULT '',
+  enabled BOOLEAN DEFAULT true,
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(trigger)
+);
+
+CREATE TRIGGER update_supply_email_settings_updated_at
+  BEFORE UPDATE ON supply_email_settings
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Enable Realtime
+ALTER PUBLICATION supabase_realtime ADD TABLE supplies;
+ALTER PUBLICATION supabase_realtime ADD TABLE supply_consumption_profiles;
+ALTER PUBLICATION supabase_realtime ADD TABLE supply_requests;
+ALTER PUBLICATION supabase_realtime ADD TABLE supply_deliveries;
+
+-- RLS (permisivo para desarrollo)
+ALTER TABLE supplies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE supply_consumption_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE supply_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE supply_request_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE supply_deliveries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE supply_email_settings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all for supplies" ON supplies FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for supply_consumption_profiles" ON supply_consumption_profiles FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for supply_requests" ON supply_requests FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for supply_request_items" ON supply_request_items FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for supply_deliveries" ON supply_deliveries FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for supply_email_settings" ON supply_email_settings FOR ALL USING (true) WITH CHECK (true);
+
+-- Seed: Insumos base
+INSERT INTO supplies (name, unit, life_days, min_stock) VALUES
+  ('Nova', 'unidad', NULL, 10),
+  ('Confort', 'unidad', NULL, 15),
+  ('Bolsas chicas', 'paquete', NULL, 5),
+  ('Bolsas grandes', 'paquete', NULL, 5),
+  ('Traperos', 'unidad', 30, 3),
+  ('Escobillones', 'unidad', 60, 2),
+  ('Dispensadores', 'unidad', NULL, 1),
+  ('Pulverizador', 'unidad', NULL, 2),
+  ('Jabon', 'bidon', NULL, 2)
+ON CONFLICT DO NOTHING;
+
+-- Seed: Configuracion de correos por defecto
+INSERT INTO supply_email_settings (trigger, recipients, subject, body, enabled) VALUES
+  ('MONDAY', '', 'Solicitud Semanal de Insumos', 'Adjunto solicitud de insumos para la semana.', true),
+  ('FRIDAY', '', 'Solicitud Fin de Semana - Insumos', 'Adjunto solicitud de insumos para el fin de semana.', true),
+  ('MANUAL', '', 'Solicitud Manual de Insumos', 'Solicitud manual de insumos.', true)
+ON CONFLICT (trigger) DO NOTHING;
+
+-- =============================================
+-- STORAGE: Create bucket for supply receipts
+-- Bucket name: supply-receipts
+-- Public: false
+-- Allowed types: pdf, jpg, png
+-- =============================================
