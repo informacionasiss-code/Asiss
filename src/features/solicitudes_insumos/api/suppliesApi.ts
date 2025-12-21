@@ -470,6 +470,52 @@ export const updateEmailSettings = async (
     return data;
 };
 
+export const createEmailSettings = async (
+    trigger: 'MONDAY' | 'FRIDAY' | 'MANUAL',
+    values: { recipients: string; subject: string; body: string; enabled: boolean }
+): Promise<SupplyEmailSettings> => {
+    const { data, error } = await supabase
+        .from('supply_email_settings')
+        .insert({ trigger, ...values })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error creating email settings:', error);
+        throw error;
+    }
+
+    return data;
+};
+
+export const ensureDefaultEmailSettings = async (): Promise<SupplyEmailSettings[]> => {
+    const existing = await fetchEmailSettings();
+    if (existing.length > 0) return existing;
+
+    const defaults = [
+        { trigger: 'MONDAY' as const, recipients: '', subject: 'Solicitud Semanal de Insumos', body: '', enabled: true },
+        { trigger: 'FRIDAY' as const, recipients: '', subject: 'Solicitud Fin de Semana - Insumos', body: '', enabled: true },
+        { trigger: 'MANUAL' as const, recipients: '', subject: 'Solicitud Manual de Insumos', body: '', enabled: true },
+    ];
+
+    const created: SupplyEmailSettings[] = [];
+    for (const def of defaults) {
+        try {
+            const setting = await createEmailSettings(def.trigger, {
+                recipients: def.recipients,
+                subject: def.subject,
+                body: def.body,
+                enabled: def.enabled,
+            });
+            created.push(setting);
+        } catch (err) {
+            console.error(`Error creating default email setting for ${def.trigger}:`, err);
+        }
+    }
+
+    return created;
+};
+
 // ==========================================
 // STATS
 // ==========================================

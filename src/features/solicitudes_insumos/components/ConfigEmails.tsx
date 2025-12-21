@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Icon } from '../../../shared/components/common/Icon';
-import { fetchEmailSettings, updateEmailSettings } from '../api/suppliesApi';
+import { fetchEmailSettings, updateEmailSettings, ensureDefaultEmailSettings } from '../api/suppliesApi';
 import { SupplyEmailSettings, EmailTrigger } from '../types';
 import { emailService } from '../../../shared/services/emailService';
 
@@ -13,6 +13,7 @@ const TRIGGER_LABELS: Record<EmailTrigger, string> = {
 export const ConfigEmails = () => {
     const [settings, setSettings] = useState<SupplyEmailSettings[]>([]);
     const [loading, setLoading] = useState(true);
+    const [initializing, setInitializing] = useState(false);
     const [saving, setSaving] = useState<string | null>(null);
     const [sendingTest, setSendingTest] = useState<string | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -29,10 +30,25 @@ export const ConfigEmails = () => {
         try {
             const data = await fetchEmailSettings();
             setSettings(data);
+            return data;
         } catch (error) {
             console.error('Error loading email settings:', error);
+            return [];
         } finally {
             setLoading(false);
+        }
+    };
+
+    const initializeDefaults = async () => {
+        setInitializing(true);
+        try {
+            const created = await ensureDefaultEmailSettings();
+            setSettings(created);
+        } catch (error) {
+            console.error('Error creating default settings:', error);
+            alert('Error al crear configuraciones. Verifique que las tablas existan en Supabase.');
+        } finally {
+            setInitializing(false);
         }
     };
 
@@ -113,6 +129,33 @@ export const ConfigEmails = () => {
         );
     }
 
+    // Empty state - no email settings yet
+    if (settings.length === 0) {
+        return (
+            <div className="space-y-4">
+                <div className="rounded-xl bg-white shadow-sm ring-1 ring-slate-200/60 p-8 text-center">
+                    <Icon name="send" size={40} className="mx-auto text-slate-300 mb-3" />
+                    <h3 className="font-medium text-slate-800 mb-2">Configurar Correos Automaticos</h3>
+                    <p className="text-sm text-slate-600 mb-4">
+                        Cree las configuraciones de correo para las solicitudes automaticas de Lunes, Viernes y Manual.
+                    </p>
+                    <button
+                        onClick={initializeDefaults}
+                        disabled={initializing}
+                        className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50"
+                    >
+                        {initializing ? (
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        ) : (
+                            <Icon name="plus" size={18} />
+                        )}
+                        Crear Configuraciones
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-4">
             {/* Info Banner */}
@@ -153,8 +196,8 @@ export const ConfigEmails = () => {
                                         onClick={() => handleToggleEnabled(setting)}
                                         disabled={isSaving}
                                         className={`rounded-lg px-3 py-1 text-xs font-medium transition-colors ${setting.enabled
-                                                ? 'bg-success-100 text-success-700 hover:bg-success-200'
-                                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                            ? 'bg-success-100 text-success-700 hover:bg-success-200'
+                                            : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                                             }`}
                                     >
                                         {setting.enabled ? 'Activo' : 'Inactivo'}
@@ -199,7 +242,7 @@ export const ConfigEmails = () => {
                                         {/* Body */}
                                         <div>
                                             <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                                                Cuerpo del mensaje
+                                                Cuerpo del mensaje (HTML permitido)
                                             </label>
                                             <textarea
                                                 value={editForm.body}
@@ -207,6 +250,7 @@ export const ConfigEmails = () => {
                                                     setEditForm((prev) => ({ ...prev, body: e.target.value }))
                                                 }
                                                 rows={4}
+                                                placeholder="Ejemplo: <p>Estimados,</p><p>Se adjunta la solicitud de insumos.</p>"
                                                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
                                             />
                                         </div>
