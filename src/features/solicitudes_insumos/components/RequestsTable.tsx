@@ -6,11 +6,11 @@ import {
     markRequestAsRetrieved,
     deleteSupplyRequest,
     getReceiptUrl,
+    uploadReceipt,
 } from '../api/suppliesApi';
 import { SupplyRequest, SupplyRequestWithItems } from '../types';
 import { formatRequestType, formatStatus } from '../utils/calculations';
 import { RequestForm } from './RequestForm';
-import { ReceiptUpload } from './ReceiptUpload';
 
 interface Props {
     onRefresh?: () => void;
@@ -22,8 +22,13 @@ export const RequestsTable = ({ onRefresh }: Props) => {
     const [showForm, setShowForm] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<SupplyRequestWithItems | null>(null);
     const [showDetail, setShowDetail] = useState(false);
-    const [showReceiptUpload, setShowReceiptUpload] = useState<string | null>(null);
     const [filterStatus, setFilterStatus] = useState<'ALL' | 'PENDIENTE' | 'RETIRADO'>('ALL');
+
+    // Close request modal state
+    const [closeModalId, setCloseModalId] = useState<string | null>(null);
+    const [closeFile, setCloseFile] = useState<File | null>(null);
+    const [closing, setClosing] = useState(false);
+    const [closeError, setCloseError] = useState<string | null>(null);
 
     const loadRequests = async () => {
         try {
@@ -53,13 +58,58 @@ export const RequestsTable = ({ onRefresh }: Props) => {
         }
     };
 
-    const handleMarkRetrieved = async (id: string) => {
+    const handleOpenCloseModal = (id: string) => {
+        setCloseModalId(id);
+        setCloseFile(null);
+        setCloseError(null);
+    };
+
+    const handleCloseRequest = async () => {
+        if (!closeModalId || !closeFile) return;
+
+        setClosing(true);
+        setCloseError(null);
+
         try {
-            await markRequestAsRetrieved(id);
+            // First upload the receipt
+            await uploadReceipt(closeModalId, closeFile);
+
+            // Then mark as retrieved
+            await markRequestAsRetrieved(closeModalId);
+
+            setCloseModalId(null);
+            setCloseFile(null);
             await loadRequests();
             onRefresh?.();
-        } catch (error) {
-            console.error('Error marking as retrieved:', error);
+        } catch (error: unknown) {
+            console.error('Error closing request:', error);
+            const errorMsg = error instanceof Error ? error.message : 'Error desconocido';
+            if (errorMsg.includes('Bucket not found') || errorMsg.includes('not found')) {
+                setCloseError('El bucket de almacenamiento no existe. Contacte al administrador para crear el bucket "supply-receipts" en Supabase Storage.');
+            } else if (errorMsg.includes('security') || errorMsg.includes('policy')) {
+                setCloseError('Error de permisos. Verifique las políticas del bucket en Supabase.');
+            } else {
+                setCloseError(`Error al cerrar solicitud: ${errorMsg}`);
+            }
+        } finally {
+            setClosing(false);
+        }
+    };
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+            if (!validTypes.includes(file.type)) {
+                setCloseError('Tipo de archivo no válido. Use PDF, JPG o PNG.');
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                setCloseError('El archivo excede 5MB.');
+                return;
+            }
+            setCloseFile(file);
+            setCloseError(null);
         }
     };
 
@@ -89,11 +139,6 @@ export const RequestsTable = ({ onRefresh }: Props) => {
         onRefresh?.();
     };
 
-    const handleReceiptSuccess = () => {
-        setShowReceiptUpload(null);
-        loadRequests();
-    };
-
     return (
         <div className="space-y-4">
             {/* Header Actions */}
@@ -102,8 +147,8 @@ export const RequestsTable = ({ onRefresh }: Props) => {
                     <button
                         onClick={() => setFilterStatus('ALL')}
                         className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${filterStatus === 'ALL'
-                                ? 'bg-brand-500 text-white'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            ? 'bg-brand-500 text-white'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                             }`}
                     >
                         Todas
@@ -111,8 +156,8 @@ export const RequestsTable = ({ onRefresh }: Props) => {
                     <button
                         onClick={() => setFilterStatus('PENDIENTE')}
                         className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${filterStatus === 'PENDIENTE'
-                                ? 'bg-warning-500 text-white'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            ? 'bg-warning-500 text-white'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                             }`}
                     >
                         Pendientes
@@ -120,8 +165,8 @@ export const RequestsTable = ({ onRefresh }: Props) => {
                     <button
                         onClick={() => setFilterStatus('RETIRADO')}
                         className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${filterStatus === 'RETIRADO'
-                                ? 'bg-success-500 text-white'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            ? 'bg-success-500 text-white'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                             }`}
                     >
                         Retiradas
@@ -174,8 +219,8 @@ export const RequestsTable = ({ onRefresh }: Props) => {
                                         <td className="px-4 py-3">
                                             <span
                                                 className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${req.status === 'PENDIENTE'
-                                                        ? 'bg-warning-100 text-warning-700'
-                                                        : 'bg-success-100 text-success-700'
+                                                    ? 'bg-warning-100 text-warning-700'
+                                                    : 'bg-success-100 text-success-700'
                                                     }`}
                                             >
                                                 {formatStatus(req.status)}
@@ -195,16 +240,9 @@ export const RequestsTable = ({ onRefresh }: Props) => {
                                                 {req.status === 'PENDIENTE' && (
                                                     <>
                                                         <button
-                                                            onClick={() => setShowReceiptUpload(req.id)}
-                                                            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-brand-600"
-                                                            title="Subir boleta"
-                                                        >
-                                                            <Icon name="upload" size={16} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleMarkRetrieved(req.id)}
+                                                            onClick={() => handleOpenCloseModal(req.id)}
                                                             className="rounded-lg p-1.5 text-slate-500 hover:bg-success-100 hover:text-success-600"
-                                                            title="Marcar retirado"
+                                                            title="Cerrar solicitud (requiere boleta)"
                                                         >
                                                             <Icon name="check" size={16} />
                                                         </button>
@@ -284,8 +322,8 @@ export const RequestsTable = ({ onRefresh }: Props) => {
                                     <span className="text-slate-500">Estado:</span>
                                     <span
                                         className={`ml-2 font-medium ${selectedRequest.status === 'PENDIENTE'
-                                                ? 'text-warning-600'
-                                                : 'text-success-600'
+                                            ? 'text-warning-600'
+                                            : 'text-success-600'
                                             }`}
                                     >
                                         {formatStatus(selectedRequest.status)}
@@ -335,24 +373,80 @@ export const RequestsTable = ({ onRefresh }: Props) => {
                 </div>
             )}
 
-            {/* Receipt Upload Modal */}
-            {showReceiptUpload && (
+            {/* Close Request Modal - REQUIRES RECEIPT */}
+            {closeModalId && (
                 <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm">
                     <div className="relative mt-8 w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
                         <div className="mb-4 flex items-center justify-between">
-                            <h2 className="text-lg font-semibold text-slate-800">Subir Boleta</h2>
+                            <h2 className="text-lg font-semibold text-slate-800">Cerrar Solicitud</h2>
                             <button
-                                onClick={() => setShowReceiptUpload(null)}
+                                onClick={() => setCloseModalId(null)}
                                 className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
                             >
                                 <Icon name="x" size={20} />
                             </button>
                         </div>
-                        <ReceiptUpload
-                            requestId={showReceiptUpload}
-                            onSuccess={handleReceiptSuccess}
-                            onCancel={() => setShowReceiptUpload(null)}
-                        />
+
+                        <div className="space-y-4">
+                            {/* Warning */}
+                            <div className="rounded-lg bg-warning-50 p-4 text-sm text-warning-800">
+                                <div className="flex items-start gap-2">
+                                    <Icon name="alert-triangle" size={18} className="mt-0.5 flex-shrink-0" />
+                                    <p>
+                                        <strong>Obligatorio:</strong> Debe adjuntar la boleta o comprobante para cerrar esta solicitud.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* File Upload */}
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-slate-700">
+                                    Boleta o Comprobante (PDF, JPG, PNG - max 5MB) *
+                                </label>
+                                <input
+                                    type="file"
+                                    accept=".pdf,.jpg,.jpeg,.png"
+                                    onChange={handleFileSelect}
+                                    className="block w-full text-sm text-slate-500 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-100"
+                                />
+                                {closeFile && (
+                                    <p className="mt-2 flex items-center gap-2 text-sm text-success-600">
+                                        <Icon name="check" size={16} />
+                                        {closeFile.name}
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Error */}
+                            {closeError && (
+                                <div className="rounded-lg bg-danger-50 p-3 text-sm text-danger-700">
+                                    <div className="flex items-start gap-2">
+                                        <Icon name="alert-triangle" size={16} className="mt-0.5 flex-shrink-0" />
+                                        <p>{closeError}</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Actions */}
+                            <div className="flex justify-end gap-3 pt-2">
+                                <button
+                                    onClick={() => setCloseModalId(null)}
+                                    className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleCloseRequest}
+                                    disabled={!closeFile || closing}
+                                    className="inline-flex items-center gap-2 rounded-lg bg-success-500 px-4 py-2 text-sm font-medium text-white hover:bg-success-600 disabled:opacity-50"
+                                >
+                                    {closing && (
+                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                    )}
+                                    Cerrar Solicitud
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
