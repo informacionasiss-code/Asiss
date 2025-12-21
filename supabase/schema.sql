@@ -30,7 +30,7 @@ CREATE TABLE staff (
 -- Índices para staff
 CREATE INDEX idx_staff_rut ON staff(rut);
 CREATE INDEX idx_staff_terminal ON staff(terminal_code);
-CREATE INDEX idx_staff_cargo ON staff(cargo);
+CREATE INDEX idx_staff_cargo ON staff(cargo); 
 CREATE INDEX idx_staff_status ON staff(status);
 
 -- Trigger para actualizar updated_at
@@ -320,7 +320,7 @@ CREATE TABLE backup_loans (
   person_turno TEXT,
   person_horario TEXT,
   person_contacto TEXT,
-  boss_email TEXT NOT NULL,
+  boss_email TEXT,
   -- Solicitud
   reason backup_reason_enum NOT NULL,
   requested_at DATE NOT NULL DEFAULT CURRENT_DATE,
