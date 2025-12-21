@@ -84,8 +84,7 @@ export const renderEmailTemplate = ({
 
   // All emails use the same sender name - subject contains the specific context
   const config = {
-    name: 'Asiss US EL ROBLE',
-    button: 'Ir al Panel',
+    name: 'US El Roble - Notificaciones Logistica',
     color: '#2563eb'
   };
 
@@ -202,18 +201,7 @@ export const renderEmailTemplate = ({
                       </tr>
                     </table>
                     
-                    <!-- CTA Button (hidden for credenciales - external recipients) -->
-                    ${module !== 'credenciales' ? `
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top: 32px;">
-                      <tr>
-                        <td align="center">
-                          <a href="${brandUrl}" style="display: inline-block; padding: 14px 32px; background: ${config.color}; color: #ffffff !important; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 14px; transition: transform 0.2s;">
-                            ${config.button}
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
-                    ` : ''}
+
                     
                   </td>
                 </tr>
