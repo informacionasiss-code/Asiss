@@ -241,7 +241,94 @@ export const createSupplyRequest = async (
         }
     }
 
+    // Send email notification
+    try {
+        await sendRequestEmail(request, consumptionSnapshot || {});
+    } catch (emailError) {
+        console.error('Error sending request email:', emailError);
+        // Don't throw - request was created successfully, email failure is logged
+    }
+
     return request;
+};
+
+// Helper function to send email for a supply request
+const sendRequestEmail = async (
+    request: SupplyRequest,
+    consumptionSnapshot: Record<string, number>
+): Promise<void> => {
+    // Determine trigger based on request type
+    let trigger: 'MONDAY' | 'FRIDAY' | 'MANUAL';
+    if (request.request_type === 'SEMANA') {
+        trigger = 'MONDAY';
+    } else if (request.request_type === 'FIN_SEMANA') {
+        trigger = 'FRIDAY';
+    } else {
+        trigger = 'MANUAL';
+    }
+
+    // Fetch email settings for this trigger
+    const { data: settings, error } = await supabase
+        .from('supply_email_settings')
+        .select('*')
+        .eq('trigger', trigger)
+        .eq('enabled', true)
+        .single();
+
+    if (error || !settings) {
+        console.log(`No enabled email settings found for trigger: ${trigger}`);
+        return;
+    }
+
+    if (!settings.recipients) {
+        console.log(`No recipients configured for trigger: ${trigger}`);
+        return;
+    }
+
+    // Build items table HTML
+    const itemsRows = Object.entries(consumptionSnapshot)
+        .map(([name, qty]) => `<tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${name}</td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: center;">${qty}</td></tr>`)
+        .join('');
+
+    const totalUnits = Object.values(consumptionSnapshot).reduce((sum, qty) => sum + qty, 0);
+
+    const emailBody = `
+        <p><strong>Terminal:</strong> ${request.terminal}</p>
+        <p><strong>Tipo:</strong> ${request.request_type === 'SEMANA' ? 'Semanal' : request.request_type === 'FIN_SEMANA' ? 'Fin de Semana' : 'Extra'}</p>
+        <p><strong>Solicitado por:</strong> ${request.created_by}</p>
+        <p><strong>Fecha:</strong> ${new Date(request.requested_at).toLocaleString('es-CL')}</p>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-top: 16px;">
+            <thead>
+                <tr style="background-color: #f8fafc;">
+                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e2e8f0;">Insumo</th>
+                    <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e2e8f0;">Cantidad</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${itemsRows}
+            </tbody>
+            <tfoot>
+                <tr style="background-color: #f8fafc; font-weight: bold;">
+                    <td style="padding: 10px;">TOTAL</td>
+                    <td style="padding: 10px; text-align: center;">${totalUnits} unidades</td>
+                </tr>
+            </tfoot>
+        </table>
+        
+        ${settings.body ? `<div style="margin-top: 24px;">${settings.body}</div>` : ''}
+    `;
+
+    // Import emailService dynamically to avoid circular deps
+    const { emailService } = await import('../../../shared/services/emailService');
+
+    await emailService.sendEmail({
+        audience: 'manual',
+        manualRecipients: settings.recipients.split(',').map((r: string) => r.trim()),
+        subject: settings.subject,
+        body: emailBody,
+        module: 'informativos',
+    });
 };
 
 export const updateSupplyRequest = async (
