@@ -236,9 +236,17 @@ export const AttendanceGrid = ({
 
             if (shiftType?.pattern_json) {
                 isOff = isOffDay(date, s.shift.shift_type_code, s.shift.variant_code, shiftType.pattern_json, undefined, override);
+
+                // Debug log for first date only (to avoid spam)
+                if (date === weekDates[0]) {
+                    console.log('getDayStatus -', s.nombre, 'shift:', s.shift.shift_type_code, 'variant:', s.shift.variant_code, 'pattern:', shiftType.pattern_json.type, 'isOff:', isOff);
+                }
             } else {
                 // Last resort fallback: Sat/Sun off
                 isOff = dayOfWeek === 0 || dayOfWeek === 6;
+                if (date === weekDates[0]) {
+                    console.log('getDayStatus -', s.nombre, 'NO PATTERN FOUND, using default Sat/Sun');
+                }
             }
         } else {
             // No shift assigned - use default 5x2 (Sat/Sun off)
