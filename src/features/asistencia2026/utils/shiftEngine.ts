@@ -11,16 +11,26 @@ import {
     StaffShiftOverride,
 } from '../types';
 
-// Reference date for cycle calculations (Monday, Jan 1, 2026 = Wednesday, so we use Monday Dec 30, 2024)
-const CYCLE_REFERENCE_DATE = new Date('2025-12-29'); // Monday before 2026
+// Reference date for cycle calculations - Monday Dec 29, 2025 at noon (to avoid TZ issues)
+// Week 1 (Dec 29 - Jan 4): Cycle index 0
+// Week 2 (Jan 5 - Jan 11): Cycle index 1
+const CYCLE_REFERENCE_DATE = new Date(Date.UTC(2025, 11, 29, 12, 0, 0)); // Dec 29, 2025 12:00 UTC
 
 /**
- * Get the number of days between two dates
+ * Get the number of days between two dates (using UTC to avoid TZ issues)
  */
 function daysBetween(date1: Date, date2: Date): number {
-    const utc1 = Date.UTC(date1.getFullYear(), date1.getMonth(), date1.getDate());
-    const utc2 = Date.UTC(date2.getFullYear(), date2.getMonth(), date2.getDate());
+    const utc1 = Date.UTC(date1.getUTCFullYear(), date1.getUTCMonth(), date1.getUTCDate());
+    const utc2 = Date.UTC(date2.getUTCFullYear(), date2.getUTCMonth(), date2.getUTCDate());
     return Math.floor((utc2 - utc1) / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Parse a date string (YYYY-MM-DD) to UTC noon to avoid TZ issues
+ */
+function parseDateToUTC(dateStr: string): Date {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
 }
 
 /**
@@ -29,14 +39,14 @@ function daysBetween(date1: Date, date2: Date): number {
 function getWeekInCycle(date: Date, cycleWeeks: number): number {
     const days = daysBetween(CYCLE_REFERENCE_DATE, date);
     const weeks = Math.floor(days / 7);
-    return weeks % cycleWeeks;
+    return ((weeks % cycleWeeks) + cycleWeeks) % cycleWeeks; // Handle negative modulo
 }
 
 /**
- * Get day of week (0 = Sunday, 6 = Saturday)
+ * Get day of week from UTC date (0 = Sunday, 6 = Saturday)
  */
-function getDayOfWeek(date: Date): number {
-    return date.getDay();
+function getDayOfWeekUTC(date: Date): number {
+    return date.getUTCDay();
 }
 
 /**
@@ -62,8 +72,9 @@ export function isOffDay(
         return override.override_type === 'OFF';
     }
 
-    const date = new Date(dateStr + 'T12:00:00'); // Noon to avoid TZ issues
-    const dayOfWeek = getDayOfWeek(date);
+    // Parse date to UTC to avoid timezone issues
+    const date = parseDateToUTC(dateStr);
+    const dayOfWeek = getDayOfWeekUTC(date);
 
     switch (pattern.type) {
         case 'fixed': {
@@ -83,7 +94,9 @@ export function isOffDay(
             }
 
             const weekPattern = pattern.weeks[weekIndex];
-            return weekPattern?.offDays?.includes(dayOfWeek) ?? false;
+            const isOff = weekPattern?.offDays?.includes(dayOfWeek) ?? false;
+
+            return isOff;
         }
 
         case 'manual': {
