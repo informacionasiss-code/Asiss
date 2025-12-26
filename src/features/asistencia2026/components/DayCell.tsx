@@ -1,17 +1,16 @@
 /**
- * DayCell - Individual cell in the attendance grid
+ * DayCell - Individual day cell component for the attendance grid
+ * Shows day status with proper badge positioning
  */
 
-import { DayStatusType, IncidenceCode, AttendanceMark } from '../types';
-import { DAY_COLORS, INCIDENCE_COLORS, TODAY_HIGHLIGHT } from '../utils/colors';
-import { Icon } from '../../../shared/components/common/Icon';
+import { AttendanceMark, IncidenceCode } from '../types';
+import { DAY_COLORS, INCIDENCE_COLORS } from '../utils/colors';
 
 interface DayCellProps {
     date: string;
-    statusType: DayStatusType;
-    horario?: string;
+    statusType: 'WORK' | 'OFF';
     turno?: 'DIA' | 'NOCHE';
-    mark?: AttendanceMark | null;
+    mark?: AttendanceMark;
     incidencies?: IncidenceCode[];
     isPending?: boolean;
     isToday?: boolean;
@@ -24,7 +23,6 @@ interface DayCellProps {
 
 export const DayCell = ({
     statusType,
-    horario,
     turno,
     mark,
     incidencies = [],
@@ -36,94 +34,99 @@ export const DayCell = ({
     permissionCode,
     onClick,
 }: DayCellProps) => {
-    // Determine cell colors based on status
-    const getColors = () => {
-        if (isDisabled) return DAY_COLORS.DESVINCULADO;
-        if (mark?.mark === 'P') return DAY_COLORS.PRESENTE;
-        if (mark?.mark === 'A') return DAY_COLORS.AUSENTE;
-        if (licenseCode) return DAY_COLORS.LIC;
-        if (vacationCode) return DAY_COLORS.VAC;
-        if (permissionCode) return DAY_COLORS.PER;
-        if (statusType === 'OFF') return DAY_COLORS.OFF;
-        if (isPending) return DAY_COLORS.PENDING;
-        return turno === 'NOCHE' ? DAY_COLORS.WORK_NOCHE : DAY_COLORS.WORK_DIA;
+    // Determine cell style based on status priority
+    const getCellStyle = () => {
+        if (isDisabled) {
+            const d = DAY_COLORS.DESVINCULADO;
+            return `${d.bg} ${d.text} ${d.border}`;
+        }
+
+        // Priority: License > Vacation > Permission > Mark > Off > Pending > Work
+        if (licenseCode) {
+            const c = DAY_COLORS.LIC;
+            return `${c.bg} ${c.text} border ${c.border}`;
+        }
+        if (vacationCode) {
+            const c = DAY_COLORS.VAC;
+            return `${c.bg} ${c.text} border ${c.border}`;
+        }
+        if (permissionCode) {
+            const c = DAY_COLORS.PER;
+            return `${c.bg} ${c.text} border ${c.border}`;
+        }
+        if (mark) {
+            const c = mark.mark === 'P' ? DAY_COLORS.PRESENTE : DAY_COLORS.AUSENTE;
+            return `${c.bg} ${c.text} border ${c.border}`;
+        }
+        if (statusType === 'OFF') {
+            const c = DAY_COLORS.OFF;
+            return `${c.bg} ${c.text} border ${c.border}`;
+        }
+        if (isPending) {
+            const c = DAY_COLORS.PENDING;
+            return `${c.bg} ${c.text} border ${c.border}`;
+        }
+        // Scheduled work day
+        const c = turno === 'NOCHE' ? DAY_COLORS.WORK_NOCHE : DAY_COLORS.WORK_DIA;
+        return `${c.bg} ${c.text} border ${c.border}`;
     };
 
-    const colors = getColors();
-
-    // Determine display content
-    const getContent = () => {
-        if (mark?.mark === 'P') return 'P';
-        if (mark?.mark === 'A') return 'A';
+    // Determine what to show in the center
+    const getCenterContent = () => {
         if (licenseCode) return 'LIC';
         if (vacationCode) return 'VAC';
         if (permissionCode) return 'PER';
-        if (statusType === 'OFF') return 'OFF';
+        if (mark) return mark.mark;
+        if (statusType === 'OFF') return 'L';
+        if (isPending) return '?';
 
-        // Show abbreviated horario for work days
-        if (horario) {
-            const match = horario.match(/^(\d{1,2}:\d{2})/);
-            return match ? match[1] : horario.substring(0, 5);
-        }
-
-        return '';
+        // Show turno indicator for scheduled work days
+        if (turno === 'NOCHE') return 'N';
+        return 'D';
     };
+
+    // Get incidence badges (max 2 to fit)
+    const badges = incidencies.slice(0, 2);
 
     return (
         <button
-            type="button"
-            onClick={!isDisabled ? onClick : undefined}
+            onClick={onClick}
             disabled={isDisabled}
             className={`
-        relative w-full min-h-[36px] sm:min-h-[40px] p-1
-        flex flex-col items-center justify-center
-        text-[10px] sm:text-xs font-medium
-        border rounded transition-all
-        ${colors.bg} ${colors.text} ${colors.border}
-        ${isToday ? TODAY_HIGHLIGHT : ''}
-        ${isDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:ring-2 hover:ring-brand-300'}
-        ${isPending && !mark ? 'ring-1 ring-yellow-400' : ''}
-      `}
-            title={[
-                horario,
-                mark?.mark === 'P' ? 'Presente' : mark?.mark === 'A' ? 'Ausente' : '',
-                mark?.note,
-                isPending ? 'Pendiente de marcar' : '',
-            ].filter(Boolean).join(' - ')}
+                relative w-full h-12 rounded-md transition-all
+                flex flex-col items-center justify-center
+                ${getCellStyle()}
+                ${isToday ? 'ring-2 ring-brand-500 ring-offset-1' : ''}
+                ${isDisabled ? 'cursor-not-allowed opacity-50' : 'hover:scale-105 cursor-pointer'}
+            `}
         >
             {/* Main content */}
-            <span className={isDisabled ? 'line-through' : ''}>
-                {getContent()}
-            </span>
+            <span className="text-sm font-bold">{getCenterContent()}</span>
 
-            {/* Incidence badges */}
-            {incidencies.length > 0 && (
-                <div className="absolute -top-1 -right-1 flex gap-0.5">
-                    {incidencies.slice(0, 2).map((code) => (
+            {/* Incidence badges - positioned at bottom */}
+            {badges.length > 0 && (
+                <div className="absolute bottom-0.5 left-0.5 right-0.5 flex gap-0.5 justify-center">
+                    {badges.map((code) => (
                         <span
                             key={code}
-                            className={`
-                px-1 py-0.5 text-[8px] font-bold rounded
-                border ${INCIDENCE_COLORS[code]}
-              `}
+                            className={`text-[8px] font-bold px-1 rounded ${INCIDENCE_COLORS[code]}`}
+                            title={getIncidenceLabel(code)}
                         >
                             {code}
                         </span>
                     ))}
-                    {incidencies.length > 2 && (
-                        <span className="px-1 py-0.5 text-[8px] font-bold rounded bg-slate-200 text-slate-600">
-                            +{incidencies.length - 2}
-                        </span>
-                    )}
-                </div>
-            )}
-
-            {/* Pending indicator */}
-            {isPending && !mark && (
-                <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2">
-                    <Icon name="alert-circle" size={10} className="text-yellow-600" />
                 </div>
             )}
         </button>
     );
 };
+
+function getIncidenceLabel(code: IncidenceCode): string {
+    const labels: Record<IncidenceCode, string> = {
+        NM: 'No Marcación',
+        NC: 'Sin Credencial',
+        CD: 'Cambio de Día',
+        AUT: 'Autorización',
+    };
+    return labels[code] || code;
+}

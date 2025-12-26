@@ -16,6 +16,7 @@ import {
     fetchOverridesForMonth,
     fetchMarksForMonth,
     createOrUpdateMark,
+    bulkMarkPresent,
     fetchLicensesForMonth,
     createLicense,
     fetchPermissionsForMonth,
@@ -216,6 +217,18 @@ export const useCreateOffboardingRequest = () => {
             createOffboardingRequest(values, requestedBy),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: asistencia2026Keys.staff() });
+        },
+    });
+};
+
+export const useBulkMarkPresent = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ staffIds, date, createdBy }: { staffIds: string[]; date: string; createdBy: string }) =>
+            bulkMarkPresent(staffIds, date, createdBy),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: asistencia2026Keys.monthData() });
         },
     });
 };

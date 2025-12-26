@@ -1,5 +1,6 @@
 /**
  * Asistencia2026Page - Main page for 2026 attendance management
+ * Weekly view with navigation, mass attendance, and shift configuration
  */
 
 import { useState, useMemo } from 'react';
@@ -25,8 +26,17 @@ import { KpiBar } from '../components/KpiBar';
 import { ShiftLegend } from '../components/ShiftLegend';
 import { RutPdfExportModal } from '../components/RutPdfExportModal';
 import { OffboardingRequestModal } from '../components/OffboardingRequestModal';
+import { ShiftConfigModal } from '../components/ShiftConfigModal';
 import { TERMINAL_COLORS, BUTTON_VARIANTS } from '../utils/colors';
-import { getMonthName, getTurnoFromHorario, isPastDate } from '../utils/shiftEngine';
+import {
+    getWeekStart,
+    getWeekDates,
+    getPreviousWeek,
+    getNextWeek,
+    formatWeekRange,
+    getTurnoFromHorario,
+    isPastDate,
+} from '../utils/shiftEngine';
 import { GridFilters, StaffWithShift, Asistencia2026KPIs } from '../types';
 import * as XLSX from 'xlsx';
 
@@ -46,11 +56,20 @@ export const Asistencia2026Page = () => {
     const terminalContext = useTerminalStore((s) => s.context);
     const session = useSessionStore((s) => s.session);
 
+    // Week navigation - start with current week
+    const today = new Date().toISOString().split('T')[0];
+    const [weekStart, setWeekStart] = useState(() => getWeekStart(today));
+    const weekDates = useMemo(() => getWeekDates(weekStart), [weekStart]);
+
+    // Get month/year from week for data fetching
+    const weekMiddleDate = new Date(weekDates[3] + 'T12:00:00');
+    const month = weekMiddleDate.getMonth();
+    const year = weekMiddleDate.getFullYear();
+
     // Filters
-    const today = new Date();
     const [filters, setFilters] = useState<GridFilters>({
-        month: today.getMonth(),
-        year: today.getFullYear(),
+        month,
+        year,
         terminal: 'ALL',
         turno: 'TODOS',
         search: '',
@@ -59,8 +78,9 @@ export const Asistencia2026Page = () => {
     // Modals
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const [offboardingStaff, setOffboardingStaff] = useState<StaffWithShift | null>(null);
+    const [shiftConfigStaff, setShiftConfigStaff] = useState<StaffWithShift | null>(null);
 
-    // Subscribe to realtime changes
+    // Realtime
     useAsistencia2026Realtime();
 
     // Data queries
@@ -69,68 +89,25 @@ export const Asistencia2026Page = () => {
 
     const staffIds = useMemo(() => staff.map((s) => s.id), [staff]);
 
-    const { data: marks = [], isLoading: loadingMarks } = useMarksForMonth(
-        staffIds,
-        filters.year,
-        filters.month
-    );
-    const { data: licenses = [], isLoading: loadingLicenses } = useLicensesForMonth(
-        staffIds,
-        filters.year,
-        filters.month
-    );
-    const { data: permissions = [], isLoading: loadingPermissions } = usePermissionsForMonth(
-        staffIds,
-        filters.year,
-        filters.month
-    );
-    const { data: vacations = [], isLoading: loadingVacations } = useVacationsForMonth(
-        staffIds,
-        filters.year,
-        filters.month
-    );
-    const { data: overrides = [], isLoading: loadingOverrides } = useOverridesForMonth(
-        staffIds,
-        filters.year,
-        filters.month
-    );
-    const { data: incidences, isLoading: loadingIncidences } = useIncidencesForMonth(
-        terminalContext,
-        filters.year,
-        filters.month
-    );
+    const { data: marks = [], isLoading: loadingMarks } = useMarksForMonth(staffIds, year, month);
+    const { data: licenses = [], isLoading: loadingLicenses } = useLicensesForMonth(staffIds, year, month);
+    const { data: permissions = [], isLoading: loadingPermissions } = usePermissionsForMonth(staffIds, year, month);
+    const { data: vacations = [], isLoading: loadingVacations } = useVacationsForMonth(staffIds, year, month);
+    const { data: overrides = [], isLoading: loadingOverrides } = useOverridesForMonth(staffIds, year, month);
+    const { data: incidences, isLoading: loadingIncidences } = useIncidencesForMonth(terminalContext, year, month);
 
     const offboardingMutation = useCreateOffboardingRequest();
 
-    const isLoading =
-        loadingTypes ||
-        loadingStaff ||
-        loadingMarks ||
-        loadingLicenses ||
-        loadingPermissions ||
-        loadingVacations ||
-        loadingOverrides ||
-        loadingIncidences;
+    const isLoading = loadingTypes || loadingStaff || loadingMarks || loadingLicenses ||
+        loadingPermissions || loadingVacations || loadingOverrides || loadingIncidences;
 
-    // Calculate KPIs
+    // KPIs
     const kpis = useMemo<Asistencia2026KPIs>(() => {
-        const byPosition = {
-            SUPERVISOR: 0,
-            INSPECTOR: 0,
-            CONDUCTOR: 0,
-            PLANILLERO: 0,
-            CLEANER: 0,
-        };
+        const byPosition = { SUPERVISOR: 0, INSPECTOR: 0, CONDUCTOR: 0, PLANILLERO: 0, CLEANER: 0 };
+        let programmmedDay = 0, programmedNight = 0;
+        let onLicense = 0, onVacation = 0, onPermission = 0, withIncidencies = 0, pendingMarks = 0;
 
-        let programmmedDay = 0;
-        let programmedNight = 0;
-        let onLicense = 0;
-        let onVacation = 0;
-        let onPermission = 0;
-        let withIncidencies = 0;
-        let pendingMarks = 0;
-
-        const todayStr = today.toISOString().split('T')[0];
+        const todayStr = new Date().toISOString().split('T')[0];
         const activeIncidenceRuts = new Set<string>();
 
         if (incidences) {
@@ -141,7 +118,6 @@ export const Asistencia2026Page = () => {
         }
 
         for (const s of staff) {
-            // Count by position
             const cargoUpper = s.cargo.toUpperCase();
             if (cargoUpper.includes('SUPERVISOR')) byPosition.SUPERVISOR++;
             else if (cargoUpper.includes('INSPECTOR')) byPosition.INSPECTOR++;
@@ -149,99 +125,45 @@ export const Asistencia2026Page = () => {
             else if (cargoUpper.includes('PLANILLERO')) byPosition.PLANILLERO++;
             else byPosition.CLEANER++;
 
-            // Count by turno
             const turno = getTurnoFromHorario(s.horario);
             if (turno === 'DIA') programmmedDay++;
             else programmedNight++;
 
-            // Check absences for today
-            const hasLicenseToday = licenses.some(
-                (l) => l.staff_id === s.id && todayStr >= l.start_date && todayStr <= l.end_date
-            );
-            const hasVacationToday = vacations.some(
-                (v) => v.staff_id === s.id && todayStr >= v.start_date && todayStr <= v.end_date
-            );
-            const hasPermissionToday = permissions.some(
-                (p) => p.staff_id === s.id && todayStr >= p.start_date && todayStr <= p.end_date
-            );
+            const hasLicenseToday = licenses.some((l) => l.staff_id === s.id && todayStr >= l.start_date && todayStr <= l.end_date);
+            const hasVacationToday = vacations.some((v) => v.staff_id === s.id && todayStr >= v.start_date && todayStr <= v.end_date);
+            const hasPermissionToday = permissions.some((p) => p.staff_id === s.id && todayStr >= p.start_date && todayStr <= p.end_date);
 
             if (hasLicenseToday) onLicense++;
             if (hasVacationToday) onVacation++;
             if (hasPermissionToday) onPermission++;
-
-            // Count incidences
             if (activeIncidenceRuts.has(s.rut)) withIncidencies++;
 
-            // Count pending marks (work days in past without mark)
+            // Pending marks check
             const staffMarks = marks.filter((m) => m.staff_id === s.id);
-            const datesInMonth = Array.from(
-                { length: new Date(filters.year, filters.month + 1, 0).getDate() },
-                (_, i) => {
-                    const d = new Date(filters.year, filters.month, i + 1);
-                    return d.toISOString().split('T')[0];
-                }
-            );
-
-            for (const dateStr of datesInMonth) {
-                if (!isPastDate(dateStr)) continue;
-                const hasMark = staffMarks.some((m) => m.mark_date === dateStr);
-                const hasAbsence =
-                    licenses.some(
-                        (l) => l.staff_id === s.id && dateStr >= l.start_date && dateStr <= l.end_date
-                    ) ||
-                    vacations.some(
-                        (v) => v.staff_id === s.id && dateStr >= v.start_date && dateStr <= v.end_date
-                    ) ||
-                    permissions.some(
-                        (p) => p.staff_id === s.id && dateStr >= p.start_date && dateStr <= p.end_date
-                    );
-
-                if (!hasMark && !hasAbsence) {
-                    pendingMarks++;
-                    break; // Count staff once, not each day
-                }
+            for (const date of weekDates) {
+                if (!isPastDate(date)) continue;
+                const hasMark = staffMarks.some((m) => m.mark_date === date);
+                const hasAbsence = licenses.some((l) => l.staff_id === s.id && date >= l.start_date && date <= l.end_date) ||
+                    vacations.some((v) => v.staff_id === s.id && date >= v.start_date && date <= v.end_date) ||
+                    permissions.some((p) => p.staff_id === s.id && date >= p.start_date && date <= p.end_date);
+                if (!hasMark && !hasAbsence) { pendingMarks++; break; }
             }
         }
 
-        return {
-            byPosition,
-            programmmedDay,
-            programmedNight,
-            onLicense,
-            onVacation,
-            onPermission,
-            withIncidencies,
-            pendingMarks,
-        };
-    }, [staff, marks, licenses, permissions, vacations, incidences, filters, today]);
+        return { byPosition, programmmedDay, programmedNight, onLicense, onVacation, onPermission, withIncidencies, pendingMarks };
+    }, [staff, marks, licenses, permissions, vacations, incidences, weekDates]);
 
-    // Handle terminal change
+    // Week navigation
+    const handlePrevWeek = () => setWeekStart(getPreviousWeek(weekStart));
+    const handleNextWeek = () => setWeekStart(getNextWeek(weekStart));
+    const handleGoToToday = () => setWeekStart(getWeekStart(today));
+
+    // Terminal change
     const handleTerminalChange = (terminal: TerminalCode | 'ALL') => {
         setFilters((f) => ({ ...f, terminal }));
     };
 
-    // Handle month navigation
-    const handlePrevMonth = () => {
-        setFilters((f) => {
-            const newMonth = f.month - 1;
-            if (newMonth < 0) {
-                return { ...f, month: 11, year: f.year - 1 };
-            }
-            return { ...f, month: newMonth };
-        });
-    };
-
-    const handleNextMonth = () => {
-        setFilters((f) => {
-            const newMonth = f.month + 1;
-            if (newMonth > 11) {
-                return { ...f, month: 0, year: f.year + 1 };
-            }
-            return { ...f, month: newMonth };
-        });
-    };
-
-    // Export to XLSX
+    // Export XLSX
     const handleExportXlsx = () => {
         const data = staff.map((s) => {
             const staffMarks = marks.filter((m) => m.staff_id === s.id);
@@ -263,10 +185,10 @@ export const Asistencia2026Page = () => {
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Asistencia');
-        XLSX.writeFile(wb, `Asistencia_${getMonthName(filters.month)}_${filters.year}.xlsx`);
+        XLSX.writeFile(wb, `Asistencia_${formatWeekRange(weekStart).replace(/\s/g, '_')}.xlsx`);
     };
 
-    // Handle offboarding request
+    // Offboarding
     const handleOffboardingRequest = async (reason: string) => {
         if (!offboardingStaff || !session) return;
 
@@ -282,25 +204,11 @@ export const Asistencia2026Page = () => {
                 requestedBy: session.supervisorName,
             });
 
-            // Send email notification
             await emailService.sendEmail({
                 audience: 'manual',
-                manualRecipients: ['rrhh@empresa.cl'], // TODO: Get from settings
+                manualRecipients: ['rrhh@empresa.cl'],
                 subject: `Solicitud de Desvinculación - ${offboardingStaff.nombre}`,
-                body: `
-Se ha solicitado la desvinculación del siguiente trabajador:
-
-Nombre: ${offboardingStaff.nombre}
-RUT: ${offboardingStaff.rut}
-Cargo: ${offboardingStaff.cargo}
-Terminal: ${offboardingStaff.terminal_code}
-
-Motivo:
-${reason}
-
-Solicitado por: ${session.supervisorName}
-Fecha: ${new Date().toLocaleString('es-CL')}
-        `.trim(),
+                body: `Se ha solicitado la desvinculación del trabajador:\n\nNombre: ${offboardingStaff.nombre}\nRUT: ${offboardingStaff.rut}\nCargo: ${offboardingStaff.cargo}\nTerminal: ${offboardingStaff.terminal_code}\n\nMotivo:\n${reason}\n\nSolicitado por: ${session.supervisorName}\nFecha: ${new Date().toLocaleString('es-CL')}`,
                 module: 'asistencia',
             });
 
@@ -314,26 +222,34 @@ Fecha: ${new Date().toLocaleString('es-CL')}
         <div className="space-y-4">
             {/* Header bar */}
             <div className="bg-white rounded-lg border p-4 space-y-4">
-                {/* Row 1: Month selector + Terminal buttons */}
+                {/* Row 1: Week navigator + Terminal buttons */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    {/* Month selector */}
+                    {/* Week navigator */}
                     <div className="flex items-center gap-2">
                         <button
-                            onClick={handlePrevMonth}
+                            onClick={handlePrevWeek}
                             className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                            title="Semana anterior"
                         >
                             <Icon name="chevron-left" size={20} />
                         </button>
-                        <div className="text-center min-w-[140px]">
+                        <div className="text-center min-w-[180px]">
                             <div className="font-semibold text-slate-800">
-                                {getMonthName(filters.month)} {filters.year}
+                                {formatWeekRange(weekStart)}
                             </div>
                         </div>
                         <button
-                            onClick={handleNextMonth}
+                            onClick={handleNextWeek}
                             className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                            title="Semana siguiente"
                         >
                             <Icon name="chevron-right" size={20} />
+                        </button>
+                        <button
+                            onClick={handleGoToToday}
+                            className="px-3 py-1.5 text-xs font-medium bg-brand-100 text-brand-700 rounded-lg hover:bg-brand-200"
+                        >
+                            Hoy
                         </button>
                     </div>
 
@@ -344,8 +260,8 @@ Fecha: ${new Date().toLocaleString('es-CL')}
                                 key={t.value}
                                 onClick={() => handleTerminalChange(t.value)}
                                 className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${filters.terminal === t.value
-                                    ? TERMINAL_COLORS[t.value]
-                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        ? TERMINAL_COLORS[t.value]
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                     }`}
                             >
                                 {t.label}
@@ -363,8 +279,8 @@ Fecha: ${new Date().toLocaleString('es-CL')}
                                 key={opt.value}
                                 onClick={() => setFilters((f) => ({ ...f, turno: opt.value }))}
                                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${filters.turno === opt.value
-                                    ? 'bg-white text-slate-800 shadow-sm'
-                                    : 'text-slate-600 hover:text-slate-800'
+                                        ? 'bg-white text-slate-800 shadow-sm'
+                                        : 'text-slate-600 hover:text-slate-800'
                                     }`}
                             >
                                 {opt.label}
@@ -374,11 +290,7 @@ Fecha: ${new Date().toLocaleString('es-CL')}
 
                     {/* Search */}
                     <div className="relative flex-1 max-w-xs">
-                        <Icon
-                            name="search"
-                            size={16}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                        />
+                        <Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
                             type="text"
                             value={filters.search}
@@ -426,10 +338,10 @@ Fecha: ${new Date().toLocaleString('es-CL')}
                 vacations={vacations}
                 overrides={overrides}
                 incidences={incidences || { noMarcaciones: [], sinCredenciales: [], cambiosDia: [], autorizaciones: [] }}
-                year={filters.year}
-                month={filters.month}
+                weekDates={weekDates}
                 isLoading={isLoading}
                 onRequestOffboarding={(s) => setOffboardingStaff(s)}
+                onOpenShiftConfig={(s) => setShiftConfigStaff(s)}
             />
 
             {/* PDF Export Modal */}
@@ -441,8 +353,8 @@ Fecha: ${new Date().toLocaleString('es-CL')}
                 licenses={licenses}
                 permissions={permissions}
                 vacations={vacations}
-                year={filters.year}
-                month={filters.month}
+                year={year}
+                month={month}
             />
 
             {/* Offboarding Modal */}
@@ -452,6 +364,13 @@ Fecha: ${new Date().toLocaleString('es-CL')}
                 staff={offboardingStaff}
                 onSubmit={handleOffboardingRequest}
                 isSubmitting={offboardingMutation.isPending}
+            />
+
+            {/* Shift Config Modal */}
+            <ShiftConfigModal
+                isOpen={shiftConfigStaff !== null}
+                onClose={() => setShiftConfigStaff(null)}
+                staff={shiftConfigStaff}
             />
         </div>
     );

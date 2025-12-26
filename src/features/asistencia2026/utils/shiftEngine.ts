@@ -194,3 +194,72 @@ export function getDayInCycle(dateStr: string, cycleDays: number = 28): number {
     const days = daysBetween(CYCLE_REFERENCE_DATE, date);
     return ((days % cycleDays) + cycleDays) % cycleDays;
 }
+
+/**
+ * Get the Monday of the week containing the given date
+ */
+export function getWeekStart(dateStr: string): string {
+    const date = new Date(dateStr + 'T12:00:00');
+    const day = date.getDay();
+    const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Monday
+    const monday = new Date(date.setDate(diff));
+    return monday.toISOString().split('T')[0];
+}
+
+/**
+ * Get array of 7 dates for a week starting from Monday
+ */
+export function getWeekDates(weekStartDate: string): string[] {
+    const dates: string[] = [];
+    const start = new Date(weekStartDate + 'T12:00:00');
+
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        dates.push(d.toISOString().split('T')[0]);
+    }
+
+    return dates;
+}
+
+/**
+ * Get previous week's Monday
+ */
+export function getPreviousWeek(weekStartDate: string): string {
+    const date = new Date(weekStartDate + 'T12:00:00');
+    date.setDate(date.getDate() - 7);
+    return date.toISOString().split('T')[0];
+}
+
+/**
+ * Get next week's Monday
+ */
+export function getNextWeek(weekStartDate: string): string {
+    const date = new Date(weekStartDate + 'T12:00:00');
+    date.setDate(date.getDate() + 7);
+    return date.toISOString().split('T')[0];
+}
+
+/**
+ * Format week range for display (e.g., "30 Dic - 5 Ene 2026")
+ */
+export function formatWeekRange(weekStartDate: string): string {
+    const dates = getWeekDates(weekStartDate);
+    const start = new Date(dates[0] + 'T12:00:00');
+    const end = new Date(dates[6] + 'T12:00:00');
+
+    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+    const startDay = start.getDate();
+    const startMonth = monthNames[start.getMonth()];
+    const endDay = end.getDate();
+    const endMonth = monthNames[end.getMonth()];
+    const year = end.getFullYear();
+
+    if (start.getMonth() === end.getMonth()) {
+        return `${startDay} - ${endDay} ${startMonth} ${year}`;
+    }
+
+    return `${startDay} ${startMonth} - ${endDay} ${endMonth} ${year}`;
+}
+

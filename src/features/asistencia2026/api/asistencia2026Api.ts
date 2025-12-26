@@ -270,6 +270,30 @@ export async function createOrUpdateMark(
     return data;
 }
 
+export async function bulkMarkPresent(
+    staffIds: string[],
+    date: string,
+    createdBy: string
+): Promise<AttendanceMark[]> {
+    if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
+    if (staffIds.length === 0) return [];
+
+    const records = staffIds.map((staff_id) => ({
+        staff_id,
+        mark_date: date,
+        mark: 'P' as const,
+        created_by: createdBy,
+    }));
+
+    const { data, error } = await supabase
+        .from('attendance_marks')
+        .upsert(records, { onConflict: 'staff_id,mark_date' })
+        .select();
+
+    if (error) throw error;
+    return data || [];
+}
+
 // ==========================================
 // LICENSES
 // ==========================================

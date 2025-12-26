@@ -1,9 +1,9 @@
 /**
- * AttendanceGrid - Main calendar grid component
- * Shows staff rows with day columns for the selected month
+ * AttendanceGrid - Weekly calendar grid component
+ * Shows staff rows with 7 day columns (Lun-Dom) for the selected week
  */
 
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { DayCell } from './DayCell';
 import { DayActionPanel } from './DayActionPanel';
 import { CARGO_COLORS } from '../utils/colors';
@@ -18,7 +18,6 @@ import {
     CARGO_ORDER,
 } from '../types';
 import {
-    getMonthDates,
     formatDayNumber,
     formatDayOfWeek,
     isToday,
@@ -31,7 +30,8 @@ import { useSessionStore } from '../../../shared/state/sessionStore';
 import {
     useCreateOrUpdateMark,
     useCreateLicense,
-    useCreatePermission
+    useCreatePermission,
+    useBulkMarkPresent,
 } from '../hooks';
 import { Icon } from '../../../shared/components/common/Icon';
 
@@ -51,11 +51,11 @@ interface AttendanceGridProps {
     vacations: { staff_id: string; start_date: string; end_date: string }[];
     overrides: StaffShiftOverride[];
     incidences: IncidenceMap;
-    year: number;
-    month: number;
+    weekDates: string[]; // Array of 7 date strings (Mon-Sun)
     isLoading?: boolean;
-    onRefresh?: () => void;
     onRequestOffboarding?: (staff: StaffWithShift) => void;
+    onOpenShiftConfig?: (staff: StaffWithShift) => void;
+    onMassMarkComplete?: () => void;
 }
 
 export const AttendanceGrid = ({
@@ -67,10 +67,10 @@ export const AttendanceGrid = ({
     vacations,
     overrides,
     incidences,
-    year,
-    month,
+    weekDates,
     isLoading = false,
     onRequestOffboarding,
+    onOpenShiftConfig,
 }: AttendanceGridProps) => {
     const session = useSessionStore((s) => s.session);
     const [selectedCell, setSelectedCell] = useState<{
@@ -81,9 +81,7 @@ export const AttendanceGrid = ({
     const createMarkMutation = useCreateOrUpdateMark();
     const createLicenseMutation = useCreateLicense();
     const createPermissionMutation = useCreatePermission();
-
-    // Get dates for the month
-    const dates = useMemo(() => getMonthDates(year, month), [year, month]);
+    const bulkMarkMutation = useBulkMarkPresent();
 
     // Group staff by cargo
     const groupedStaff = useMemo(() => {
@@ -94,7 +92,6 @@ export const AttendanceGrid = ({
 
         for (const s of staff) {
             const cargoUpper = s.cargo.toUpperCase();
-            // Map cargo to display group
             let group = 'CLEANER';
             if (cargoUpper.includes('SUPERVISOR')) group = 'SUPERVISOR';
             else if (cargoUpper.includes('INSPECTOR')) group = 'INSPECTOR';
@@ -109,7 +106,7 @@ export const AttendanceGrid = ({
         return groups;
     }, [staff]);
 
-    // Build lookup maps for quick access
+    // Build lookup maps
     const marksMap = useMemo(() => {
         const map = new Map<string, AttendanceMark>();
         for (const m of marks) {
@@ -134,7 +131,7 @@ export const AttendanceGrid = ({
         return map;
     }, [overrides]);
 
-    // Check if staff has license/vacation/permission on a date
+    // Helpers
     const getLicenseForDate = (staffId: string, date: string) => {
         return licenses.find(
             (l) => l.staff_id === staffId && isDateInRange(date, l.start_date, l.end_date)
@@ -153,25 +150,15 @@ export const AttendanceGrid = ({
         );
     };
 
-    // Get incidences for a staff+date
     const getIncidencesForDate = (rut: string, date: string): IncidenceCode[] => {
         const codes: IncidenceCode[] = [];
-        if (incidences.noMarcaciones.some((i) => i.rut === rut && i.date === date)) {
-            codes.push('NM');
-        }
-        if (incidences.sinCredenciales.some((i) => i.rut === rut && i.date === date)) {
-            codes.push('NC');
-        }
-        if (incidences.cambiosDia.some((i) => i.rut === rut && i.date === date)) {
-            codes.push('CD');
-        }
-        if (incidences.autorizaciones.some((i) => i.rut === rut && i.date === date)) {
-            codes.push('AUT');
-        }
+        if (incidences.noMarcaciones.some((i) => i.rut === rut && i.date === date)) codes.push('NM');
+        if (incidences.sinCredenciales.some((i) => i.rut === rut && i.date === date)) codes.push('NC');
+        if (incidences.cambiosDia.some((i) => i.rut === rut && i.date === date)) codes.push('CD');
+        if (incidences.autorizaciones.some((i) => i.rut === rut && i.date === date)) codes.push('AUT');
         return codes;
     };
 
-    // Calculate day status for a staff on a date
     const getDayStatus = (s: StaffWithShift, date: string) => {
         const mark = marksMap.get(`${s.id}-${date}`);
         const license = getLicenseForDate(s.id, date);
@@ -180,7 +167,6 @@ export const AttendanceGrid = ({
         const override = overridesMap.get(`${s.id}-${date}`);
         const inc = getIncidencesForDate(s.rut, date);
 
-        // Determine if OFF day
         const shiftType = s.shift ? shiftTypesMap.get(s.shift.shift_type_code) : null;
         const pattern = shiftType?.pattern_json;
 
@@ -189,14 +175,7 @@ export const AttendanceGrid = ({
             isOff = isOffDay(date, s.shift.shift_type_code, s.shift.variant_code, pattern, undefined, override);
         }
 
-        // Check if work day in past without mark (pending)
-        const isPending =
-            !isOff &&
-            isPastDate(date) &&
-            !mark &&
-            !license &&
-            !vacation &&
-            !permission;
+        const isPending = !isOff && isPastDate(date) && !mark && !license && !vacation && !permission;
 
         return {
             mark,
@@ -210,10 +189,37 @@ export const AttendanceGrid = ({
         };
     };
 
-    // Handle actions
+    // Mass mark all present for today
+    const handleMassMarkPresent = () => {
+        if (!session) return;
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        // Get all staff IDs that should be marked (work day, no mark yet)
+        const staffToMark = staff.filter((s) => {
+            if (s.status === 'DESVINCULADO') return false;
+            const status = getDayStatus(s, todayStr);
+            if (status.isOff || status.license || status.vacation || status.permission) return false;
+            if (status.mark) return false; // Already marked
+            return true;
+        });
+
+        if (staffToMark.length === 0) {
+            alert('No hay personal pendiente de marcar para hoy');
+            return;
+        }
+
+        if (confirm(`¿Marcar ${staffToMark.length} personas como PRESENTE hoy?`)) {
+            bulkMarkMutation.mutate({
+                staffIds: staffToMark.map((s) => s.id),
+                date: todayStr,
+                createdBy: session.supervisorName,
+            });
+        }
+    };
+
+    // Action handlers
     const handleMarkPresent = () => {
         if (!selectedCell || !session) return;
-
         createMarkMutation.mutate({
             values: {
                 staff_id: selectedCell.staff.id,
@@ -227,7 +233,6 @@ export const AttendanceGrid = ({
 
     const handleMarkAbsent = (note: string) => {
         if (!selectedCell || !session) return;
-
         createMarkMutation.mutate({
             values: {
                 staff_id: selectedCell.staff.id,
@@ -242,7 +247,6 @@ export const AttendanceGrid = ({
 
     const handleRegisterLicense = (startDate: string, endDate: string, note?: string) => {
         if (!selectedCell || !session) return;
-
         createLicenseMutation.mutate({
             values: {
                 staff_id: selectedCell.staff.id,
@@ -255,14 +259,8 @@ export const AttendanceGrid = ({
         setSelectedCell(null);
     };
 
-    const handleRegisterPermission = (
-        startDate: string,
-        endDate: string,
-        type: string,
-        note?: string
-    ) => {
+    const handleRegisterPermission = (startDate: string, endDate: string, type: string, note?: string) => {
         if (!selectedCell || !session) return;
-
         createPermissionMutation.mutate({
             values: {
                 staff_id: selectedCell.staff.id,
@@ -291,118 +289,140 @@ export const AttendanceGrid = ({
 
     return (
         <>
-            <div className="overflow-x-auto border rounded-lg bg-white">
-                <table className="w-full border-collapse text-sm">
-                    {/* Header row with dates */}
-                    <thead className="sticky top-0 z-20 bg-slate-50">
-                        <tr>
-                            <th className="sticky left-0 z-30 bg-slate-100 border-b border-r p-2 text-left min-w-[180px]">
-                                <span className="text-slate-700 font-semibold">Personal</span>
-                            </th>
-                            {dates.map((date) => {
-                                const dayNum = formatDayNumber(date);
-                                const dayName = formatDayOfWeek(date);
-                                const today = isToday(date);
+            <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+                {/* Mass mark button */}
+                <div className="flex items-center justify-between p-3 bg-slate-50 border-b">
+                    <span className="text-sm text-slate-600">
+                        {staff.length} trabajadores
+                    </span>
+                    <button
+                        onClick={handleMassMarkPresent}
+                        disabled={bulkMarkMutation.isPending}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium text-sm hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+                    >
+                        <Icon name="check" size={16} />
+                        {bulkMarkMutation.isPending ? 'Marcando...' : 'Marcar Todos Presente Hoy'}
+                    </button>
+                </div>
+
+                {/* Grid table */}
+                <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                        {/* Header with day names and dates */}
+                        <thead className="bg-slate-50">
+                            <tr>
+                                <th className="sticky left-0 z-10 bg-slate-100 border-b border-r px-3 py-2 text-left min-w-[200px]">
+                                    <span className="text-slate-700 font-semibold text-sm">Personal</span>
+                                </th>
+                                {weekDates.map((date) => {
+                                    const dayName = formatDayOfWeek(date);
+                                    const dayNum = formatDayNumber(date);
+                                    const isTodayDate = isToday(date);
+
+                                    return (
+                                        <th
+                                            key={date}
+                                            className={`border-b px-2 py-2 text-center min-w-[60px] ${isTodayDate ? 'bg-brand-50' : 'bg-slate-50'
+                                                }`}
+                                        >
+                                            <div className="text-xs font-medium text-slate-500">{dayName}</div>
+                                            <div className={`text-lg font-bold ${isTodayDate ? 'text-brand-600' : 'text-slate-700'}`}>
+                                                {dayNum}
+                                            </div>
+                                        </th>
+                                    );
+                                })}
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {CARGO_ORDER.map((cargo) => {
+                                const staffInGroup = groupedStaff[cargo] || [];
+                                if (staffInGroup.length === 0) return null;
 
                                 return (
-                                    <th
-                                        key={date}
-                                        className={`
-                      border-b p-1 text-center min-w-[50px] max-w-[60px]
-                      ${today ? 'bg-brand-50 ring-2 ring-inset ring-brand-200' : 'bg-slate-50'}
-                    `}
-                                    >
-                                        <div className="text-[10px] text-slate-500">{dayName}</div>
-                                        <div className="text-sm font-semibold text-slate-700">{dayNum}</div>
-                                    </th>
+                                    <React.Fragment key={cargo}>
+                                        {/* Cargo header */}
+                                        <tr className={CARGO_COLORS[cargo]}>
+                                            <td
+                                                colSpan={weekDates.length + 1}
+                                                className="sticky left-0 px-3 py-2 font-semibold text-sm text-slate-700 border-b"
+                                            >
+                                                {cargo} ({staffInGroup.length})
+                                            </td>
+                                        </tr>
+
+                                        {/* Staff rows */}
+                                        {staffInGroup.map((s) => {
+                                            const isDesvinculado = s.status === 'DESVINCULADO';
+
+                                            return (
+                                                <tr
+                                                    key={s.id}
+                                                    className={`hover:bg-slate-50/50 transition-colors ${isDesvinculado ? 'bg-slate-50 opacity-60' : ''
+                                                        }`}
+                                                >
+                                                    {/* Staff info cell */}
+                                                    <td className="sticky left-0 z-10 bg-white border-b border-r px-3 py-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className={`font-medium text-sm text-slate-800 truncate ${isDesvinculado ? 'line-through' : ''}`}>
+                                                                    {s.nombre}
+                                                                </div>
+                                                                <div className="text-xs text-slate-500 truncate">
+                                                                    {s.rut} | {s.horario || 'Sin horario'}
+                                                                </div>
+                                                            </div>
+                                                            {/* Shift config button */}
+                                                            {onOpenShiftConfig && (
+                                                                <button
+                                                                    onClick={() => onOpenShiftConfig(s)}
+                                                                    className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600"
+                                                                    title="Configurar turno"
+                                                                >
+                                                                    <Icon name="settings" size={14} />
+                                                                </button>
+                                                            )}
+                                                            {s.admonitionCount && s.admonitionCount > 0 && (
+                                                                <span className="px-1.5 py-0.5 text-xs font-medium bg-red-100 text-red-700 rounded">
+                                                                    {s.admonitionCount}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+
+                                                    {/* Day cells */}
+                                                    {weekDates.map((date) => {
+                                                        const status = getDayStatus(s, date);
+
+                                                        return (
+                                                            <td key={date} className="border-b p-1">
+                                                                <DayCell
+                                                                    date={date}
+                                                                    statusType={status.isOff ? 'OFF' : 'WORK'}
+                                                                    turno={status.turno}
+                                                                    mark={status.mark}
+                                                                    incidencies={status.incidencies}
+                                                                    isPending={status.isPending}
+                                                                    isToday={isToday(date)}
+                                                                    isDisabled={isDesvinculado}
+                                                                    licenseCode={status.license ? 'LIC' : undefined}
+                                                                    vacationCode={status.vacation ? 'VAC' : undefined}
+                                                                    permissionCode={status.permission ? 'PER' : undefined}
+                                                                    onClick={() => setSelectedCell({ staff: s, date })}
+                                                                />
+                                                            </td>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            );
+                                        })}
+                                    </React.Fragment>
                                 );
                             })}
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {CARGO_ORDER.map((cargo) => {
-                            const staffInGroup = groupedStaff[cargo] || [];
-                            if (staffInGroup.length === 0) return null;
-
-                            return (
-                                <React.Fragment key={cargo}>
-                                    {/* Cargo header row */}
-                                    <tr className={CARGO_COLORS[cargo]}>
-                                        <td
-                                            colSpan={dates.length + 1}
-                                            className="sticky left-0 p-2 font-semibold text-slate-700 border-b"
-                                        >
-                                            {cargo} ({staffInGroup.length})
-                                        </td>
-                                    </tr>
-
-                                    {/* Staff rows */}
-                                    {staffInGroup.map((s) => {
-                                        const isDesvinculado = s.status === 'DESVINCULADO';
-
-                                        return (
-                                            <tr
-                                                key={s.id}
-                                                className={`
-                          hover:bg-slate-50/50 transition-colors
-                          ${isDesvinculado ? 'bg-slate-50 opacity-60' : ''}
-                        `}
-                                            >
-                                                {/* Staff name cell - sticky */}
-                                                <td className="sticky left-0 z-10 bg-white border-b border-r p-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className={`font-medium text-slate-800 truncate ${isDesvinculado ? 'line-through' : ''}`}>
-                                                                {s.nombre}
-                                                            </div>
-                                                            <div className="text-[10px] text-slate-500 truncate">
-                                                                {s.rut} | {s.horario}
-                                                            </div>
-                                                        </div>
-                                                        {s.admonitionCount && s.admonitionCount > 0 && (
-                                                            <span
-                                                                className="px-1.5 py-0.5 text-[10px] font-medium bg-red-100 text-red-700 rounded"
-                                                                title={`${s.admonitionCount} amonestación(es)`}
-                                                            >
-                                                                {s.admonitionCount}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </td>
-
-                                                {/* Day cells */}
-                                                {dates.map((date) => {
-                                                    const status = getDayStatus(s, date);
-
-                                                    return (
-                                                        <td key={date} className="border-b p-0.5">
-                                                            <DayCell
-                                                                date={date}
-                                                                statusType={status.isOff ? 'OFF' : 'WORK'}
-                                                                horario={status.isOff ? undefined : s.horario}
-                                                                turno={status.turno}
-                                                                mark={status.mark}
-                                                                incidencies={status.incidencies}
-                                                                isPending={status.isPending}
-                                                                isToday={isToday(date)}
-                                                                isDisabled={isDesvinculado}
-                                                                licenseCode={status.license ? 'LIC' : undefined}
-                                                                vacationCode={status.vacation ? 'VAC' : undefined}
-                                                                permissionCode={status.permission ? 'PER' : undefined}
-                                                                onClick={() => setSelectedCell({ staff: s, date })}
-                                                            />
-                                                        </td>
-                                                    );
-                                                })}
-                                            </tr>
-                                        );
-                                    })}
-                                </React.Fragment>
-                            );
-                        })}
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {/* Action panel */}
@@ -429,6 +449,3 @@ export const AttendanceGrid = ({
         </>
     );
 };
-
-// React import for Fragment
-import React from 'react';
