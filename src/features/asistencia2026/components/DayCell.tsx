@@ -80,12 +80,11 @@ export const DayCell = ({
 
         // Show horario for work days
         if (horario) {
-            // Format horario to show just times, possibly shortened
+            // Format horario to show times (reduced time already baked in)
             const formatted = formatHorario(horario, reducido);
             return (
                 <div className="text-center leading-tight">
-                    <div className="text-[10px] font-semibold">{formatted}</div>
-                    {reducido && <div className="text-[8px] text-amber-600">-1h</div>}
+                    <div className={`text-[10px] font-semibold ${reducido ? 'text-amber-600' : ''}`}>{formatted}</div>
                 </div>
             );
         }
@@ -133,7 +132,7 @@ export const DayCell = ({
  * Format horario for display in cell
  * Input: "10:00-20:00" or "22:00-06:00"
  * Output: "10-20" or "22-06" (shortened)
- * If reducido, show reduced time
+ * If reducido (Ley 40 hrs), subtract 1 hour from end time
  */
 function formatHorario(horario: string, reducido: boolean): string {
     if (!horario) return '';
@@ -142,14 +141,12 @@ function formatHorario(horario: string, reducido: boolean): string {
     const match = horario.match(/(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})/);
     if (!match) return horario;
 
-    let startHour = parseInt(match[1], 10);
-    const endHour = parseInt(match[3], 10);
+    const startHour = parseInt(match[1], 10);
+    let endHour = parseInt(match[3], 10);
 
-    // If reducido (Ley 40 hrs), add 1 hour to start or subtract from end
+    // If reducido (Ley 40 hrs), subtract 1 hour from end time
     if (reducido) {
-        // Show start 1 hour later (shorter work day)
-        const adjustedStart = (startHour + 1) % 24;
-        return `${adjustedStart.toString().padStart(2, '0')}-${endHour.toString().padStart(2, '0')}`;
+        endHour = endHour === 0 ? 23 : endHour - 1;
     }
 
     return `${startHour.toString().padStart(2, '0')}-${endHour.toString().padStart(2, '0')}`;

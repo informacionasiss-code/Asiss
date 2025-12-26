@@ -57,8 +57,16 @@ export async function fetchStaffWithShifts(
         .order('cargo')
         .order('nombre');
 
-    // Apply terminal filter
-    const terminals = resolveTerminalsForContext(terminalContext);
+    // Apply terminal filter - prioritize UI filter over store context
+    let terminals: string[] = [];
+    if (filters?.terminal && filters.terminal !== 'ALL') {
+        // Use explicit UI filter
+        terminals = [filters.terminal];
+    } else {
+        // Fall back to store context
+        terminals = resolveTerminalsForContext(terminalContext);
+    }
+
     if (terminals.length > 0) {
         query = query.in('terminal_code', terminals);
     }
