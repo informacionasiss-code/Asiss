@@ -1,6 +1,7 @@
 /**
  * AttendanceGrid - Weekly calendar grid component
- * Shows staff rows with 7 day columns (Lun-Dom) for the selected week
+ * Shows staff rows with horarios and calculates off days based on shift patterns
+ * Implements Ley 40 horas (43 hrs in 2026 = 2 reduced days per week)
  */
 
 import React, { useMemo, useState } from 'react';
@@ -21,10 +22,10 @@ import {
     formatDayNumber,
     formatDayOfWeek,
     isToday,
-    isPastDate,
     isOffDay,
     isDateInRange,
     getTurnoFromHorario,
+    getReducedHourDays,
 } from '../utils/shiftEngine';
 import { useSessionStore } from '../../../shared/state/sessionStore';
 import {
@@ -51,11 +52,10 @@ interface AttendanceGridProps {
     vacations: { staff_id: string; start_date: string; end_date: string }[];
     overrides: StaffShiftOverride[];
     incidences: IncidenceMap;
-    weekDates: string[]; // Array of 7 date strings (Mon-Sun)
+    weekDates: string[];
     isLoading?: boolean;
     onRequestOffboarding?: (staff: StaffWithShift) => void;
     onOpenShiftConfig?: (staff: StaffWithShift) => void;
-    onMassMarkComplete?: () => void;
 }
 
 export const AttendanceGrid = ({
@@ -159,6 +159,10 @@ export const AttendanceGrid = ({
         return codes;
     };
 
+    /**
+     * Get day status for a staff member on a given date
+     * Calculates off days based on shift pattern (5x2, etc.)
+     */
     const getDayStatus = (s: StaffWithShift, date: string) => {
         const mark = marksMap.get(`${s.id}-${date}`);
         const license = getLicenseForDate(s.id, date);
@@ -167,15 +171,25 @@ export const AttendanceGrid = ({
         const override = overridesMap.get(`${s.id}-${date}`);
         const inc = getIncidencesForDate(s.rut, date);
 
-        const shiftType = s.shift ? shiftTypesMap.get(s.shift.shift_type_code) : null;
-        const pattern = shiftType?.pattern_json;
-
+        // Calculate off day based on shift pattern
         let isOff = false;
-        if (s.shift && pattern) {
-            isOff = isOffDay(date, s.shift.shift_type_code, s.shift.variant_code, pattern, undefined, override);
+        let horario = s.horario;
+        const turno = getTurnoFromHorario(s.horario);
+
+        if (s.shift) {
+            const shiftType = shiftTypesMap.get(s.shift.shift_type_code);
+            if (shiftType?.pattern_json) {
+                isOff = isOffDay(date, s.shift.shift_type_code, s.shift.variant_code, shiftType.pattern_json, undefined, override);
+            }
+        } else {
+            // No shift assigned - use default 5x2 (Sat/Sun off)
+            const dayOfWeek = new Date(date + 'T12:00:00').getDay();
+            isOff = dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
         }
 
-        const isPending = !isOff && isPastDate(date) && !mark && !license && !vacation && !permission;
+        // Check if this is a reduced hour day (Ley 40 hrs)
+        const reducedDays = getReducedHourDays(weekDates[0]);
+        const isReducido = reducedDays.includes(date) && !isOff;
 
         return {
             mark,
@@ -183,9 +197,10 @@ export const AttendanceGrid = ({
             vacation,
             permission,
             isOff,
-            isPending,
+            horario,
+            turno,
+            reducido: isReducido,
             incidencies: inc,
-            turno: getTurnoFromHorario(s.horario),
         };
     };
 
@@ -194,12 +209,11 @@ export const AttendanceGrid = ({
         if (!session) return;
         const todayStr = new Date().toISOString().split('T')[0];
 
-        // Get all staff IDs that should be marked (work day, no mark yet)
         const staffToMark = staff.filter((s) => {
             if (s.status === 'DESVINCULADO') return false;
             const status = getDayStatus(s, todayStr);
             if (status.isOff || status.license || status.vacation || status.permission) return false;
-            if (status.mark) return false; // Already marked
+            if (status.mark) return false;
             return true;
         });
 
@@ -298,7 +312,7 @@ export const AttendanceGrid = ({
                     <button
                         onClick={handleMassMarkPresent}
                         disabled={bulkMarkMutation.isPending}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium text-sm hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+                        className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium text-sm hover:bg-emerald-700 transition-colors flex items-center gap-2 disabled:opacity-50"
                     >
                         <Icon name="check" size={16} />
                         {bulkMarkMutation.isPending ? 'Marcando...' : 'Marcar Todos Presente Hoy'}
@@ -311,7 +325,7 @@ export const AttendanceGrid = ({
                         {/* Header with day names and dates */}
                         <thead className="bg-slate-50">
                             <tr>
-                                <th className="sticky left-0 z-10 bg-slate-100 border-b border-r px-3 py-2 text-left min-w-[200px]">
+                                <th className="sticky left-0 z-10 bg-slate-100 border-b border-r px-3 py-2 text-left min-w-[220px]">
                                     <span className="text-slate-700 font-semibold text-sm">Personal</span>
                                 </th>
                                 {weekDates.map((date) => {
@@ -322,7 +336,7 @@ export const AttendanceGrid = ({
                                     return (
                                         <th
                                             key={date}
-                                            className={`border-b px-2 py-2 text-center min-w-[60px] ${isTodayDate ? 'bg-brand-50' : 'bg-slate-50'
+                                            className={`border-b px-1 py-2 text-center min-w-[70px] ${isTodayDate ? 'bg-brand-50' : 'bg-slate-50'
                                                 }`}
                                         >
                                             <div className="text-xs font-medium text-slate-500">{dayName}</div>
@@ -355,6 +369,7 @@ export const AttendanceGrid = ({
                                         {/* Staff rows */}
                                         {staffInGroup.map((s) => {
                                             const isDesvinculado = s.status === 'DESVINCULADO';
+                                            const shiftType = s.shift ? shiftTypesMap.get(s.shift.shift_type_code) : null;
 
                                             return (
                                                 <tr
@@ -371,16 +386,16 @@ export const AttendanceGrid = ({
                                                                 </div>
                                                                 <div className="text-xs text-slate-500 truncate">
                                                                     {s.rut} | {s.horario || 'Sin horario'}
+                                                                    {shiftType && <span className="ml-1 text-brand-600">({shiftType.name})</span>}
                                                                 </div>
                                                             </div>
-                                                            {/* Shift config button */}
                                                             {onOpenShiftConfig && (
                                                                 <button
                                                                     onClick={() => onOpenShiftConfig(s)}
-                                                                    className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600"
-                                                                    title="Configurar turno"
+                                                                    className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-brand-600 transition-colors"
+                                                                    title="Configurar turno y días libres"
                                                                 >
-                                                                    <Icon name="settings" size={14} />
+                                                                    <Icon name="settings" size={16} />
                                                                 </button>
                                                             )}
                                                             {s.admonitionCount && s.admonitionCount > 0 && (
@@ -396,14 +411,15 @@ export const AttendanceGrid = ({
                                                         const status = getDayStatus(s, date);
 
                                                         return (
-                                                            <td key={date} className="border-b p-1">
+                                                            <td key={date} className="border-b p-0.5">
                                                                 <DayCell
                                                                     date={date}
-                                                                    statusType={status.isOff ? 'OFF' : 'WORK'}
+                                                                    isOff={status.isOff}
+                                                                    horario={status.isOff ? undefined : status.horario}
+                                                                    reducido={status.reducido}
                                                                     turno={status.turno}
                                                                     mark={status.mark}
                                                                     incidencies={status.incidencies}
-                                                                    isPending={status.isPending}
                                                                     isToday={isToday(date)}
                                                                     isDisabled={isDesvinculado}
                                                                     licenseCode={status.license ? 'LIC' : undefined}

@@ -263,3 +263,45 @@ export function formatWeekRange(weekStartDate: string): string {
     return `${startDay} ${startMonth} - ${endDay} ${endMonth} ${year}`;
 }
 
+/**
+ * Get reduced hour days for Ley 40 horas
+ * In 2026: 43 hours/week = need to reduce 2 days per week by 1 hour each
+ * Strategy: Tuesday and Thursday are reduced days (middle of work week)
+ */
+export function getReducedHourDays(weekStartDate: string): string[] {
+    const dates = getWeekDates(weekStartDate);
+    // Tuesday (index 1) and Thursday (index 3) are reduced days
+    return [dates[1], dates[3]];
+}
+
+/**
+ * Calculate total weekly hours
+ * Standard: 9 hrs/day x 5 days = 45 hrs
+ * Ley 40 (2026): 43 hrs = 45 - 2 = 43 hrs
+ */
+export function calculateWeeklyHours(regularDays: number, reducedDays: number): number {
+    const REGULAR_HOURS = 9;
+    const REDUCED_HOURS = 8;
+    return (regularDays * REGULAR_HOURS) + (reducedDays * REDUCED_HOURS);
+}
+
+/**
+ * Get horario ajustado for reduced days
+ * Input: "10:00-20:00" (10 hrs with 1 hr lunch = 9 work)
+ * Output for reduced: "11:00-20:00" (9 hrs with 1 hr lunch = 8 work)
+ */
+export function getAdjustedHorario(horario: string, isReduced: boolean): string {
+    if (!horario || !isReduced) return horario;
+
+    const match = horario.match(/(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})/);
+    if (!match) return horario;
+
+    const startHour = parseInt(match[1], 10);
+    const startMin = match[2];
+    const endHour = match[3];
+    const endMin = match[4];
+
+    // Add 1 hour to start time
+    const newStartHour = (startHour + 1) % 24;
+    return `${newStartHour.toString().padStart(2, '0')}:${startMin}-${endHour}:${endMin}`;
+}

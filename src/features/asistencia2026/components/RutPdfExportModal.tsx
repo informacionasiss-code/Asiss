@@ -1,14 +1,24 @@
 /**
- * RutPdfExportModal - Export monthly attendance PDF by RUT
+ * RutPdfExportModal - Professional PDF generator for worker monthly schedule
+ * Single page, clean design for worker delivery
+ * Includes Ley 40 horas (43 hrs in 2026) with reduced hour days
  */
 
 import { useState, useMemo } from 'react';
-import { Icon } from '../../../shared/components/common/Icon';
-import { BUTTON_VARIANTS, DAY_COLORS } from '../utils/colors';
-import { getMonthDates, formatDayNumber, formatDayOfWeek, getMonthName } from '../utils/shiftEngine';
-import { StaffWithShift, AttendanceMark, AttendanceLicense, AttendancePermission } from '../types';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Icon } from '../../../shared/components/common/Icon';
+import { StaffWithShift, AttendanceMark, AttendanceLicense, AttendancePermission, ShiftType } from '../types';
+import {
+    getMonthDates,
+    formatDayOfWeek,
+    getMonthName,
+    isOffDay,
+    getWeekStart,
+    getReducedHourDays,
+    getAdjustedHorario,
+} from '../utils/shiftEngine';
+import { useShiftTypes } from '../hooks';
 
 interface RutPdfExportModalProps {
     isOpen: boolean;
@@ -33,50 +43,29 @@ export const RutPdfExportModal = ({
     year,
     month,
 }: RutPdfExportModalProps) => {
-    const [searchRut, setSearchRut] = useState('');
-    const [selectedStaff, setSelectedStaff] = useState<StaffWithShift | null>(null);
+    const [selectedRut, setSelectedRut] = useState<string>('');
+    const [selectedMonth, setSelectedMonth] = useState(month);
+    const [selectedYear, setSelectedYear] = useState(year);
     const [isGenerating, setIsGenerating] = useState(false);
 
-    const dates = useMemo(() => getMonthDates(year, month), [year, month]);
+    const { data: shiftTypes = [] } = useShiftTypes();
 
-    // Find matching staff
-    const matchingStaff = useMemo(() => {
-        if (!searchRut.trim()) return [];
-        const search = searchRut.toLowerCase().replace(/[.-]/g, '');
-        return staff.filter(
-            (s) =>
-                s.rut.toLowerCase().replace(/[.-]/g, '').includes(search) ||
-                s.nombre.toLowerCase().includes(search)
-        ).slice(0, 5);
-    }, [searchRut, staff]);
+    const shiftTypesMap = useMemo(() => {
+        const map = new Map<string, ShiftType>();
+        for (const st of shiftTypes) {
+            map.set(st.code, st);
+        }
+        return map;
+    }, [shiftTypes]);
 
-    // Get data for selected staff
-    const staffMarks = useMemo(() => {
-        if (!selectedStaff) return [];
-        return marks.filter((m) => m.staff_id === selectedStaff.id);
-    }, [selectedStaff, marks]);
+    const selectedStaff = staff.find((s) => s.rut === selectedRut);
 
-    const staffLicenses = useMemo(() => {
-        if (!selectedStaff) return [];
-        return licenses.filter((l) => l.staff_id === selectedStaff.id);
-    }, [selectedStaff, licenses]);
-
-    const staffPermissions = useMemo(() => {
-        if (!selectedStaff) return [];
-        return permissions.filter((p) => p.staff_id === selectedStaff.id);
-    }, [selectedStaff, permissions]);
-
-    const staffVacations = useMemo(() => {
-        if (!selectedStaff) return [];
-        return vacations.filter((v) => v.staff_id === selectedStaff.id);
-    }, [selectedStaff, vacations]);
+    const months = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
 
     if (!isOpen) return null;
-
-    const handleSelectStaff = (s: StaffWithShift) => {
-        setSelectedStaff(s);
-        setSearchRut(s.rut);
-    };
 
     const generatePdf = async () => {
         if (!selectedStaff) return;
@@ -84,274 +73,359 @@ export const RutPdfExportModal = ({
         setIsGenerating(true);
 
         try {
-            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-            const monthName = getMonthName(month);
+            const doc = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: 'letter',
+            });
 
-            // Header
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 10;
+
+            // Colors
+            const brandColor = [37, 99, 235] as [number, number, number]; // blue-600
+            const lightGray = [248, 250, 252] as [number, number, number]; // slate-50
+            const darkGray = [51, 65, 85] as [number, number, number]; // slate-700
+            const greenColor = [16, 185, 129] as [number, number, number]; // emerald-500
+            const offDayColor = [226, 232, 240] as [number, number, number]; // slate-200
+            const reducedColor = [251, 191, 36] as [number, number, number]; // amber-400
+
+            // Header background
+            doc.setFillColor(...brandColor);
+            doc.rect(0, 0, pageWidth, 30, 'F');
+
+            // Company logo placeholder
+            doc.setTextColor(255, 255, 255);
             doc.setFontSize(16);
             doc.setFont('helvetica', 'bold');
-            doc.text(`Asistencia ${monthName} ${year}`, 14, 15);
+            doc.text('ASISTENCIA MENSUAL', margin, 13);
 
-            // Staff info
             doc.setFontSize(10);
             doc.setFont('helvetica', 'normal');
-            doc.text(`Nombre: ${selectedStaff.nombre}`, 14, 25);
-            doc.text(`RUT: ${selectedStaff.rut}`, 14, 30);
-            doc.text(`Cargo: ${selectedStaff.cargo}`, 80, 25);
-            doc.text(`Terminal: ${selectedStaff.terminal_code}`, 80, 30);
-            doc.text(`Horario: ${selectedStaff.horario}`, 140, 25);
-            doc.text(`Turno: ${selectedStaff.turno}`, 140, 30);
+            doc.text(`${getMonthName(selectedMonth)} ${selectedYear} | Ley 40 Horas (43 hrs/sem)`, margin, 22);
 
-            // Calendar table
-            const calendarData = dates.map((date) => {
-                const dayNum = formatDayNumber(date);
-                const dayName = formatDayOfWeek(date);
-                const mark = staffMarks.find((m) => m.mark_date === date);
-                const license = staffLicenses.find(
-                    (l) => date >= l.start_date && date <= l.end_date
-                );
-                const permission = staffPermissions.find(
-                    (p) => date >= p.start_date && date <= p.end_date
-                );
-                const vacation = staffVacations.find(
-                    (v) => date >= v.start_date && date <= v.end_date
-                );
+            // Worker info box
+            doc.setFillColor(...lightGray);
+            doc.roundedRect(margin, 35, pageWidth - 2 * margin, 25, 2, 2, 'F');
 
-                let status = '-';
-                if (mark) status = mark.mark;
-                else if (license) status = 'LIC';
-                else if (vacation) status = 'VAC';
-                else if (permission) status = 'PER';
+            doc.setTextColor(...darkGray);
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text(selectedStaff.nombre, margin + 5, 45);
 
-                return [`${dayNum}`, dayName, status, mark?.note || ''];
-            });
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`RUT: ${selectedStaff.rut}`, margin + 5, 52);
+            doc.text(`Cargo: ${selectedStaff.cargo}`, margin + 80, 52);
+            doc.text(`Terminal: ${selectedStaff.terminal_code}`, margin + 140, 52);
 
-            autoTable(doc, {
-                startY: 38,
-                head: [['Día', 'Sem', 'Estado', 'Nota']],
-                body: calendarData,
-                theme: 'grid',
-                headStyles: { fillColor: [59, 130, 246], textColor: 255, fontSize: 8 },
-                bodyStyles: { fontSize: 7 },
-                columnStyles: {
-                    0: { cellWidth: 10 },
-                    1: { cellWidth: 12 },
-                    2: { cellWidth: 15 },
-                    3: { cellWidth: 'auto' },
-                },
-                margin: { left: 14, right: 14 },
-            });
+            // Shift info
+            const shiftType = selectedStaff.shift ? shiftTypesMap.get(selectedStaff.shift.shift_type_code) : null;
+            doc.text(`Horario Base: ${selectedStaff.horario || 'Sin asignar'}`, margin + 5, 58);
+            doc.text(`Turno: ${shiftType?.name || '5x2 Fijo (Default)'}`, margin + 80, 58);
+            doc.text(`Tipo: ${selectedStaff.turno || 'DIA'}`, margin + 180, 58);
 
-            // Get final Y position
-            const finalY = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY || 100;
+            // Generate calendar table
+            const monthDates = getMonthDates(selectedYear, selectedMonth);
+            const weeks: string[][] = [];
+            let currentWeek: string[] = [];
 
-            // Licenses summary
-            if (staffLicenses.length > 0) {
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Licencias del mes:', 14, finalY + 10);
+            // Get first day of month day of week
+            const firstDate = new Date(monthDates[0] + 'T12:00:00');
+            const firstDayOfWeek = firstDate.getDay(); // 0 = Sunday
+            const mondayFirst = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
 
-                autoTable(doc, {
-                    startY: finalY + 14,
-                    head: [['Desde', 'Hasta', 'Nota']],
-                    body: staffLicenses.map((l) => [l.start_date, l.end_date, l.note || '']),
-                    theme: 'striped',
-                    headStyles: { fillColor: [139, 92, 246], textColor: 255, fontSize: 8 },
-                    bodyStyles: { fontSize: 8 },
-                    margin: { left: 14, right: 14 },
-                });
+            // Fill empty cells before first date
+            for (let i = 0; i < mondayFirst; i++) {
+                currentWeek.push('');
             }
 
-            // Permissions summary
-            if (staffPermissions.length > 0) {
-                const licenseTableEnd = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY || finalY + 20;
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Permisos del mes:', 14, licenseTableEnd + 10);
+            // Fill dates
+            for (const date of monthDates) {
+                currentWeek.push(date);
+                if (currentWeek.length === 7) {
+                    weeks.push(currentWeek);
+                    currentWeek = [];
+                }
+            }
 
-                autoTable(doc, {
-                    startY: licenseTableEnd + 14,
-                    head: [['Desde', 'Hasta', 'Tipo', 'Nota']],
-                    body: staffPermissions.map((p) => [
-                        p.start_date,
-                        p.end_date,
-                        p.permission_type,
-                        p.note || '',
-                    ]),
-                    theme: 'striped',
-                    headStyles: { fillColor: [245, 158, 11], textColor: 255, fontSize: 8 },
-                    bodyStyles: { fontSize: 8 },
-                    margin: { left: 14, right: 14 },
-                });
+            // Fill remaining empty cells
+            if (currentWeek.length > 0) {
+                while (currentWeek.length < 7) {
+                    currentWeek.push('');
+                }
+                weeks.push(currentWeek);
+            }
+
+            // Build table data
+            const tableBody: string[][] = [];
+
+            for (const week of weeks) {
+                const row: string[] = [];
+                const weekStart = week.find(d => d !== '') || '';
+                const weekStartFormatted = weekStart ? getWeekStart(weekStart) : '';
+                const reducedDays = weekStartFormatted ? getReducedHourDays(weekStartFormatted) : [];
+
+                for (const dateStr of week) {
+                    if (!dateStr) {
+                        row.push('');
+                        continue;
+                    }
+
+                    const date = new Date(dateStr + 'T12:00:00');
+                    const dayNum = date.getDate();
+
+                    // Check if off day
+                    let isOff = false;
+                    if (selectedStaff.shift) {
+                        const shiftPattern = shiftType?.pattern_json;
+                        if (shiftPattern) {
+                            isOff = isOffDay(dateStr, selectedStaff.shift.shift_type_code, selectedStaff.shift.variant_code, shiftPattern);
+                        }
+                    } else {
+                        // Default: Sat/Sun off
+                        const dayOfWeek = date.getDay();
+                        isOff = dayOfWeek === 0 || dayOfWeek === 6;
+                    }
+
+                    // Check license/vacation/permission
+                    const hasLicense = licenses.some(l => l.staff_id === selectedStaff.id && dateStr >= l.start_date && dateStr <= l.end_date);
+                    const hasVacation = vacations.some(v => v.staff_id === selectedStaff.id && dateStr >= v.start_date && dateStr <= v.end_date);
+                    const hasPerm = permissions.some(p => p.staff_id === selectedStaff.id && dateStr >= p.start_date && dateStr <= p.end_date);
+
+                    if (hasLicense) {
+                        row.push(`${dayNum}\nLIC`);
+                    } else if (hasVacation) {
+                        row.push(`${dayNum}\nVAC`);
+                    } else if (hasPerm) {
+                        row.push(`${dayNum}\nPER`);
+                    } else if (isOff) {
+                        row.push(`${dayNum}\nLIBRE`);
+                    } else {
+                        // Work day - check if reduced hour
+                        const isReduced = reducedDays.includes(dateStr);
+                        const horario = selectedStaff.horario || '10:00-20:00';
+                        const displayHorario = isReduced ? getAdjustedHorario(horario, true) : horario;
+                        const shortHorario = displayHorario.replace(/:\d{2}/g, '');
+                        row.push(`${dayNum}\n${shortHorario}${isReduced ? '*' : ''}`);
+                    }
+                }
+
+                tableBody.push(row);
+            }
+
+            // Draw calendar table
+            autoTable(doc, {
+                startY: 65,
+                head: [['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']],
+                body: tableBody,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: brandColor,
+                    textColor: [255, 255, 255],
+                    fontSize: 10,
+                    fontStyle: 'bold',
+                    halign: 'center',
+                    valign: 'middle',
+                    cellPadding: 3,
+                },
+                styles: {
+                    fontSize: 9,
+                    cellPadding: 4,
+                    halign: 'center',
+                    valign: 'middle',
+                    minCellHeight: 18,
+                    lineColor: [203, 213, 225],
+                    lineWidth: 0.3,
+                },
+                columnStyles: {
+                    0: { cellWidth: 35 },
+                    1: { cellWidth: 35 },
+                    2: { cellWidth: 35 },
+                    3: { cellWidth: 35 },
+                    4: { cellWidth: 35 },
+                    5: { cellWidth: 35, fillColor: offDayColor },
+                    6: { cellWidth: 35, fillColor: offDayColor },
+                },
+                didParseCell: (data) => {
+                    const cellText = data.cell.text.join('\n');
+                    if (cellText.includes('LIBRE')) {
+                        data.cell.styles.fillColor = offDayColor;
+                        data.cell.styles.textColor = [100, 116, 139]; // slate-500
+                    } else if (cellText.includes('LIC')) {
+                        data.cell.styles.fillColor = [243, 232, 255]; // purple-100
+                        data.cell.styles.textColor = [107, 33, 168]; // purple-700
+                    } else if (cellText.includes('VAC')) {
+                        data.cell.styles.fillColor = [204, 251, 241]; // teal-100
+                        data.cell.styles.textColor = [15, 118, 110]; // teal-700
+                    } else if (cellText.includes('PER')) {
+                        data.cell.styles.fillColor = [254, 243, 199]; // amber-100
+                        data.cell.styles.textColor = [180, 83, 9]; // amber-700
+                    } else if (cellText.includes('*')) {
+                        // Reduced hour day
+                        data.cell.styles.fillColor = [254, 249, 195]; // yellow-100
+                    }
+                },
+                margin: { left: margin, right: margin },
+            });
+
+            // Footer with legend
+            const finalY = (doc as any).lastAutoTable.finalY + 8;
+
+            doc.setFontSize(8);
+            doc.setTextColor(...darkGray);
+            doc.setFont('helvetica', 'bold');
+            doc.text('LEYENDA:', margin, finalY);
+
+            doc.setFont('helvetica', 'normal');
+            const legends = [
+                { text: 'LIBRE = Día libre', x: margin + 20 },
+                { text: 'LIC = Licencia', x: margin + 60 },
+                { text: 'VAC = Vacaciones', x: margin + 95 },
+                { text: 'PER = Permiso', x: margin + 135 },
+                { text: '* = Día reducido (-1hr Ley 40hrs)', x: margin + 170 },
+            ];
+
+            for (const leg of legends) {
+                doc.text(leg.text, leg.x, finalY);
             }
 
             // Footer
-            const pageCount = doc.getNumberOfPages();
-            for (let i = 1; i <= pageCount; i++) {
-                doc.setPage(i);
-                doc.setFontSize(8);
-                doc.setFont('helvetica', 'normal');
-                doc.text(
-                    `Generado: ${new Date().toLocaleString('es-CL')} | Página ${i} de ${pageCount}`,
-                    14,
-                    doc.internal.pageSize.height - 10
-                );
-            }
+            doc.setFontSize(7);
+            doc.text(`Generado: ${new Date().toLocaleString('es-CL')} | Ley 40 Horas: 43 hrs/semana en 2026 (2 días reducidos: Mar y Jue)`, margin, pageHeight - 8);
 
             // Save
-            doc.save(`Asistencia_${selectedStaff.rut}_${monthName}_${year}.pdf`);
+            const fileName = `Horario_${selectedStaff.rut.replace(/\./g, '')}_${months[selectedMonth]}_${selectedYear}.pdf`;
+            doc.save(fileName);
+
         } catch (error) {
             console.error('Error generating PDF:', error);
+            alert('Error al generar el PDF');
         } finally {
             setIsGenerating(false);
         }
     };
 
     return (
-        <>
-            {/* Backdrop */}
-            <div
-                className="fixed inset-0 bg-black/30 z-40 transition-opacity"
-                onClick={onClose}
-            />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-brand-600 to-brand-500 text-white rounded-t-xl">
+                    <div>
+                        <h2 className="text-lg font-semibold">Generar PDF Mensual</h2>
+                        <p className="text-sm text-brand-100">Horario para entregar al trabajador</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                        <Icon name="x" size={20} />
+                    </button>
+                </div>
 
-            {/* Modal */}
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
-                    {/* Header */}
-                    <div className="flex items-center justify-between p-4 border-b shrink-0">
-                        <div className="flex items-center gap-2">
-                            <Icon name="file-text" size={20} className="text-brand-600" />
-                            <h3 className="font-semibold text-slate-800">Exportar PDF por RUT</h3>
-                        </div>
-                        <button
-                            onClick={onClose}
-                            className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+                {/* Content */}
+                <div className="p-4 space-y-4">
+                    {/* Staff selector */}
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                            Seleccionar Trabajador
+                        </label>
+                        <select
+                            value={selectedRut}
+                            onChange={(e) => setSelectedRut(e.target.value)}
+                            className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-brand-500"
                         >
-                            <Icon name="x" size={20} />
-                        </button>
+                            <option value="">-- Seleccionar --</option>
+                            {staff.map((s) => (
+                                <option key={s.rut} value={s.rut}>
+                                    {s.nombre} ({s.rut})
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
-                    {/* Content */}
-                    <div className="p-4 space-y-4 overflow-y-auto flex-1">
-                        {/* Search input */}
-                        <div className="relative">
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                                Buscar por RUT o Nombre
-                            </label>
-                            <div className="relative">
-                                <Icon
-                                    name="search"
-                                    size={18}
-                                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                                />
-                                <input
-                                    type="text"
-                                    value={searchRut}
-                                    onChange={(e) => {
-                                        setSearchRut(e.target.value);
-                                        setSelectedStaff(null);
-                                    }}
-                                    placeholder="Ej: 12.345.678-9 o Juan Pérez"
-                                    className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-                                />
-                            </div>
-
-                            {/* Search results */}
-                            {matchingStaff.length > 0 && !selectedStaff && (
-                                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                                    {matchingStaff.map((s) => (
-                                        <button
-                                            key={s.id}
-                                            onClick={() => handleSelectStaff(s)}
-                                            className="w-full p-3 text-left hover:bg-slate-50 transition-colors border-b last:border-b-0"
-                                        >
-                                            <p className="font-medium text-slate-800">{s.nombre}</p>
-                                            <p className="text-sm text-slate-500">
-                                                {s.rut} | {s.cargo}
-                                            </p>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                    {/* Month/Year selectors */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Mes</label>
+                            <select
+                                value={selectedMonth}
+                                onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                                className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-brand-500"
+                            >
+                                {months.map((m, i) => (
+                                    <option key={i} value={i}>{m}</option>
+                                ))}
+                            </select>
                         </div>
-
-                        {/* Selected staff preview */}
-                        {selectedStaff && (
-                            <div className="space-y-3">
-                                <div className="p-3 bg-brand-50 rounded-lg border border-brand-100">
-                                    <p className="font-medium text-brand-800">{selectedStaff.nombre}</p>
-                                    <p className="text-sm text-brand-600">
-                                        {selectedStaff.rut} | {selectedStaff.cargo} | {selectedStaff.terminal_code}
-                                    </p>
-                                </div>
-
-                                {/* Quick stats */}
-                                <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                                    <div className={`p-2 rounded-lg ${DAY_COLORS.PRESENTE.bg}`}>
-                                        <div className="font-semibold text-emerald-700">
-                                            {staffMarks.filter((m) => m.mark === 'P').length}
-                                        </div>
-                                        <div className="text-emerald-600">Presente</div>
-                                    </div>
-                                    <div className={`p-2 rounded-lg ${DAY_COLORS.AUSENTE.bg}`}>
-                                        <div className="font-semibold text-red-700">
-                                            {staffMarks.filter((m) => m.mark === 'A').length}
-                                        </div>
-                                        <div className="text-red-600">Ausente</div>
-                                    </div>
-                                    <div className={`p-2 rounded-lg ${DAY_COLORS.LIC.bg}`}>
-                                        <div className="font-semibold text-purple-700">
-                                            {staffLicenses.length}
-                                        </div>
-                                        <div className="text-purple-600">Licencias</div>
-                                    </div>
-                                    <div className={`p-2 rounded-lg ${DAY_COLORS.PER.bg}`}>
-                                        <div className="font-semibold text-amber-700">
-                                            {staffPermissions.length}
-                                        </div>
-                                        <div className="text-amber-600">Permisos</div>
-                                    </div>
-                                </div>
-
-                                {/* Month info */}
-                                <p className="text-sm text-slate-500 text-center">
-                                    Período: {getMonthName(month)} {year} ({dates.length} días)
-                                </p>
-                            </div>
-                        )}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Año</label>
+                            <select
+                                value={selectedYear}
+                                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                                className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-brand-500"
+                            >
+                                <option value={2025}>2025</option>
+                                <option value={2026}>2026</option>
+                                <option value={2027}>2027</option>
+                            </select>
+                        </div>
                     </div>
 
-                    {/* Footer */}
-                    <div className="p-4 border-t bg-slate-50 shrink-0">
-                        <div className="flex gap-2">
-                            <button
-                                onClick={onClose}
-                                className={`flex-1 py-2 rounded-lg font-medium ${BUTTON_VARIANTS.secondary}`}
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={generatePdf}
-                                disabled={!selectedStaff || isGenerating}
-                                className={`flex-1 py-2 rounded-lg font-medium ${BUTTON_VARIANTS.primary} disabled:opacity-50`}
-                            >
-                                {isGenerating ? (
-                                    <>
-                                        <Icon name="loader" size={16} className="inline animate-spin mr-1" />
-                                        Generando...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Icon name="download" size={16} className="inline mr-1" />
-                                        Descargar PDF
-                                    </>
-                                )}
-                            </button>
+                    {/* Preview info */}
+                    {selectedStaff && (
+                        <div className="p-3 bg-slate-50 rounded-lg border">
+                            <div className="font-medium text-slate-800">{selectedStaff.nombre}</div>
+                            <div className="text-sm text-slate-500">
+                                {selectedStaff.horario || 'Sin horario'} | {selectedStaff.turno}
+                            </div>
+                            <div className="text-xs text-brand-600 mt-1">
+                                {selectedStaff.shift
+                                    ? shiftTypesMap.get(selectedStaff.shift.shift_type_code)?.name
+                                    : '5x2 Fijo (Por defecto)'}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Ley 40 hrs info */}
+                    <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                        <div className="flex items-start gap-2">
+                            <Icon name="info" size={16} className="text-amber-600 mt-0.5" />
+                            <div>
+                                <div className="text-sm font-medium text-amber-800">Ley 40 Horas</div>
+                                <div className="text-xs text-amber-700">
+                                    En 2026: 43 hrs/semana. Los martes y jueves tienen -1 hora (indicados con *).
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                {/* Footer */}
+                <div className="flex justify-end gap-3 p-4 border-t">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={generatePdf}
+                        disabled={!selectedRut || isGenerating}
+                        className="px-4 py-2 text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 rounded-lg disabled:opacity-50 flex items-center gap-2"
+                    >
+                        {isGenerating ? (
+                            <>
+                                <Icon name="loader" size={16} className="animate-spin" />
+                                Generando...
+                            </>
+                        ) : (
+                            <>
+                                <Icon name="download" size={16} />
+                                Generar PDF
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
-        </>
+        </div>
     );
 };
