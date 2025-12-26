@@ -155,8 +155,9 @@ export const useUpsertStaffShift = () => {
     return useMutation({
         mutationFn: (values: StaffShiftFormValues) => upsertStaffShift(values),
         onSuccess: (data) => {
-            queryClient.invalidateQueries({ queryKey: asistencia2026Keys.staffShift(data.staff_id) });
-            queryClient.invalidateQueries({ queryKey: asistencia2026Keys.staff() });
+            console.log('useUpsertStaffShift - Invalidating queries for staff_id:', data.staff_id);
+            // Invalidate all asistencia2026 queries to refresh all data
+            queryClient.invalidateQueries({ queryKey: asistencia2026Keys.all });
         },
     });
 };
