@@ -124,6 +124,8 @@ export async function fetchStaffShift(staffId: string): Promise<StaffShift | nul
 export async function upsertStaffShift(values: StaffShiftFormValues): Promise<StaffShift> {
     if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
 
+    console.log('upsertStaffShift - Attempting insert:', values);
+
     const { data, error } = await supabase
         .from('staff_shifts')
         .upsert({
@@ -135,7 +137,12 @@ export async function upsertStaffShift(values: StaffShiftFormValues): Promise<St
         .select()
         .single();
 
-    if (error) throw error;
+    if (error) {
+        console.error('upsertStaffShift - ERROR:', error);
+        throw error;
+    }
+
+    console.log('upsertStaffShift - SUCCESS:', data);
     return data;
 }
 
