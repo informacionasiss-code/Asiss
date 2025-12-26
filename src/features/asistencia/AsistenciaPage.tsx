@@ -5,9 +5,11 @@ import { SinCredencialesPage } from './pages/SinCredencialesPage';
 import { CambiosDeDiaPage } from './pages/CambiosDeDiaPage';
 import { AutorizacionesPage } from './pages/AutorizacionesPage';
 import { VacacionesPage } from './pages/VacacionesPage';
+import { Asistencia2026Page } from '../asistencia2026/pages/Asistencia2026Page';
 import { AttendanceSubsection } from './types';
 
 const TABS: { id: AttendanceSubsection; label: string; icon: IconName }[] = [
+  { id: 'asistencia-2026', label: 'Asistencia 2026', icon: 'calendar-range' },
   { id: 'no-marcaciones', label: 'No Marcaciones', icon: 'clock' },
   { id: 'sin-credenciales', label: 'Sin Credenciales', icon: 'key' },
   { id: 'cambios-dia', label: 'Cambios de Día', icon: 'calendar' },
@@ -18,11 +20,13 @@ const TABS: { id: AttendanceSubsection; label: string; icon: IconName }[] = [
 import { EmailConfigModal } from '../settings/components/EmailConfigModal';
 
 export const AsistenciaPage = () => {
-  const [activeTab, setActiveTab] = useState<AttendanceSubsection>('no-marcaciones');
+  const [activeTab, setActiveTab] = useState<AttendanceSubsection>('asistencia-2026');
   const [isConfigOpen, setIsConfigOpen] = useState(false);
 
   const renderContent = () => {
     switch (activeTab) {
+      case 'asistencia-2026':
+        return <Asistencia2026Page />;
       case 'no-marcaciones':
         return <NoMarcacionesPage />;
       case 'sin-credenciales':
@@ -37,6 +41,7 @@ export const AsistenciaPage = () => {
         return null;
     }
   };
+
 
   return (
     <div className="space-y-6">

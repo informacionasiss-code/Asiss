@@ -93,6 +93,7 @@ export const useVacaciones = (ctx: TerminalContext, filters?: AttendanceFilters)
 // ==========================================
 
 const TABLE_NAMES: Record<AttendanceSubsection, string> = {
+    'asistencia-2026': 'attendance_marks', // Not used for KPIs, but needed for type
     'no-marcaciones': 'attendance_no_marcaciones',
     'sin-credenciales': 'attendance_sin_credenciales',
     'cambios-dia': 'attendance_cambios_dia',
@@ -101,6 +102,7 @@ const TABLE_NAMES: Record<AttendanceSubsection, string> = {
 };
 
 const DATE_COLUMNS: Record<AttendanceSubsection, string> = {
+    'asistencia-2026': 'mark_date', // Not used for KPIs, but needed for type
     'no-marcaciones': 'date',
     'sin-credenciales': 'date',
     'cambios-dia': 'date',

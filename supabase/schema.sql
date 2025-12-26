@@ -923,7 +923,250 @@ INSERT INTO task_email_settings (scope_type, scope_code, enabled)
 VALUES ('GLOBAL', 'ALL', true)
 ON CONFLICT (scope_type, scope_code) DO NOTHING;
 
+
 -- Storage bucket for task files (run this in SQL Editor)
 -- INSERT INTO storage.buckets (id, name, public) VALUES ('task-files', 'task-files', true)
 -- ON CONFLICT (id) DO NOTHING;
+
+-- =============================================
+-- SECTION: ASISTENCIA 2026
+-- Sistema de programación anual y control de 
+-- asistencia diaria
+-- =============================================
+
+-- Tabla: Tipos de turno con patrón JSON
+CREATE TABLE shift_types (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  pattern_json JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Índice para código de turno
+CREATE INDEX idx_shift_types_code ON shift_types(code);
+
+-- Tabla: Asignación de turno por trabajador
+CREATE TABLE staff_shifts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  staff_id UUID NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+  shift_type_code TEXT NOT NULL REFERENCES shift_types(code),
+  variant_code TEXT NOT NULL CHECK (variant_code IN ('PRINCIPAL', 'CONTRATURNO', 'SUPER', 'FIJO', 'ESPECIAL')),
+  start_date DATE NOT NULL DEFAULT '2026-01-01',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(staff_id)
+);
+
+CREATE INDEX idx_staff_shifts_staff ON staff_shifts(staff_id);
+CREATE INDEX idx_staff_shifts_type ON staff_shifts(shift_type_code);
+
+-- Tabla: Plantillas especiales para ESPECIAL (28 días editables)
+CREATE TABLE staff_shift_special_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  staff_id UUID NOT NULL REFERENCES staff(id) ON DELETE CASCADE UNIQUE,
+  cycle_days INT NOT NULL DEFAULT 28,
+  off_days_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_special_templates_staff ON staff_shift_special_templates(staff_id);
+
+CREATE TRIGGER update_special_templates_updated_at
+  BEFORE UPDATE ON staff_shift_special_templates
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Tabla: Excepciones/overrides por fecha específica
+CREATE TABLE staff_shift_overrides (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  staff_id UUID NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+  override_date DATE NOT NULL,
+  override_type TEXT NOT NULL CHECK (override_type IN ('OFF', 'WORK', 'CUSTOM')),
+  meta_json JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(staff_id, override_date)
+);
+
+CREATE INDEX idx_shift_overrides_staff_date ON staff_shift_overrides(staff_id, override_date);
+
+-- Tabla: Marcas de asistencia diarias (P/A)
+CREATE TABLE attendance_marks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  staff_id UUID NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+  mark_date DATE NOT NULL,
+  mark TEXT NOT NULL CHECK (mark IN ('P', 'A')),
+  note TEXT,
+  created_by TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(staff_id, mark_date)
+);
+
+CREATE INDEX idx_attendance_marks_staff_date ON attendance_marks(staff_id, mark_date);
+CREATE INDEX idx_attendance_marks_date ON attendance_marks(mark_date);
+
+-- Tabla: Licencias médicas
+CREATE TABLE attendance_licenses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  staff_id UUID NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  note TEXT,
+  document_path TEXT,
+  created_by TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  CONSTRAINT valid_license_dates CHECK (end_date >= start_date)
+);
+
+CREATE INDEX idx_attendance_licenses_staff ON attendance_licenses(staff_id);
+CREATE INDEX idx_attendance_licenses_dates ON attendance_licenses(start_date, end_date);
+
+-- Tabla: Permisos
+CREATE TABLE attendance_permissions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  staff_id UUID NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  permission_type TEXT NOT NULL DEFAULT 'PERSONAL',
+  note TEXT,
+  created_by TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  CONSTRAINT valid_permission_dates CHECK (end_date >= start_date)
+);
+
+CREATE INDEX idx_attendance_permissions_staff ON attendance_permissions(staff_id);
+CREATE INDEX idx_attendance_permissions_dates ON attendance_permissions(start_date, end_date);
+
+-- Tabla: Configuración de correos para asistencia 2026
+CREATE TABLE attendance_2026_email_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  scope_type TEXT NOT NULL CHECK (scope_type IN ('GLOBAL', 'TERMINAL')),
+  scope_code TEXT NOT NULL,
+  recipients TEXT NOT NULL DEFAULT '',
+  subject_template TEXT NOT NULL DEFAULT 'Notificación de Asistencia',
+  body_template TEXT NOT NULL DEFAULT '',
+  enabled BOOLEAN NOT NULL DEFAULT true,
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(scope_type, scope_code)
+);
+
+CREATE TRIGGER update_attendance_2026_email_settings_updated_at
+  BEFORE UPDATE ON attendance_2026_email_settings
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Tabla: Solicitudes de desvinculación
+CREATE TABLE offboarding_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  staff_id UUID NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+  staff_rut TEXT NOT NULL,
+  staff_name TEXT NOT NULL,
+  terminal_code TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  requested_by TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('ENVIADA', 'APROBADA', 'RECHAZADA')) DEFAULT 'ENVIADA',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_offboarding_staff ON offboarding_requests(staff_id);
+CREATE INDEX idx_offboarding_status ON offboarding_requests(status);
+CREATE INDEX idx_offboarding_terminal ON offboarding_requests(terminal_code);
+
+-- Enable Realtime (idempotent)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'shift_types'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE shift_types;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'staff_shifts'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE staff_shifts;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'attendance_marks'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE attendance_marks;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'attendance_licenses'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE attendance_licenses;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'attendance_permissions'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE attendance_permissions;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'offboarding_requests'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE offboarding_requests;
+  END IF;
+END $$;
+
+-- RLS (permissive for development)
+ALTER TABLE shift_types ENABLE ROW LEVEL SECURITY;
+ALTER TABLE staff_shifts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE staff_shift_special_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE staff_shift_overrides ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance_marks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance_licenses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance_permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance_2026_email_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE offboarding_requests ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all for shift_types" ON shift_types FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for staff_shifts" ON staff_shifts FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for staff_shift_special_templates" ON staff_shift_special_templates FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for staff_shift_overrides" ON staff_shift_overrides FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for attendance_marks" ON attendance_marks FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for attendance_licenses" ON attendance_licenses FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for attendance_permissions" ON attendance_permissions FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for attendance_2026_email_settings" ON attendance_2026_email_settings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for offboarding_requests" ON offboarding_requests FOR ALL USING (true) WITH CHECK (true);
+
+-- Seed: Tipos de turno
+INSERT INTO shift_types (code, name, pattern_json) VALUES
+  ('5X2_FIJO', '5x2 Fijo', '{
+    "type": "fixed",
+    "description": "Lunes a Viernes trabaja, Sábado y Domingo libre",
+    "offDays": [6, 0]
+  }'::jsonb),
+  ('5X2_ROTATIVO', '5x2 Rotativo', '{
+    "type": "rotating",
+    "description": "Semana 1: Miércoles+Domingo libre. Semana 2: Viernes+Sábado libre",
+    "cycle": 2,
+    "weeks": [
+      {"offDays": [3, 0]},
+      {"offDays": [5, 6]}
+    ]
+  }'::jsonb),
+  ('5X2_SUPER', '5x2 Super', '{
+    "type": "rotating",
+    "description": "Semana 1: Miércoles+Domingo libre. Semana 2: Jueves+Viernes libre",
+    "cycle": 2,
+    "weeks": [
+      {"offDays": [3, 0]},
+      {"offDays": [4, 5]}
+    ]
+  }'::jsonb),
+  ('ESPECIAL', 'Especial (Manual)', '{
+    "type": "manual",
+    "description": "Plantilla de 28 días definida manualmente",
+    "cycleDays": 28
+  }'::jsonb)
+ON CONFLICT (code) DO NOTHING;
+
+-- Insert default global email settings
+INSERT INTO attendance_2026_email_settings (scope_type, scope_code, recipients, subject_template, body_template, enabled)
+VALUES ('GLOBAL', 'ALL', '', 'Notificación de Asistencia 2026', 'Estimado/a,\n\nSe ha registrado un evento en el sistema de asistencia.\n\nSaludos cordiales.', true)
+ON CONFLICT (scope_type, scope_code) DO NOTHING;
 

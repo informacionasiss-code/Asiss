@@ -3,6 +3,7 @@ import { ReactNode } from 'react';
 type IconName =
     | 'users'
     | 'calendar'
+    | 'calendar-range'
     | 'clipboard'
     | 'megaphone'
     | 'clock'
@@ -17,6 +18,7 @@ type IconName =
     | 'image'
     | 'home'
     | 'chevron-down'
+    | 'chevron-left'
     | 'chevron-right'
     | 'menu'
     | 'x'
@@ -33,6 +35,7 @@ type IconName =
     | 'alert-circle'
     | 'alert-triangle'
     | 'user'
+    | 'user-x'
     | 'plus'
     | 'check'
     | 'x-circle'
@@ -44,7 +47,13 @@ type IconName =
     | 'edit'
     | 'send'
     | 'upload'
+    | 'download'
+    | 'loader'
+    | 'sun'
+    | 'moon'
+    | 'palmtree'
     | 'file';
+
 
 interface IconProps {
     name: IconName;
@@ -185,7 +194,32 @@ const icons: Record<IconName, ReactNode> = {
     file: (
         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
     ),
+    'calendar-range': (
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z" />
+    ),
+    'chevron-left': (
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+    ),
+    'user-x': (
+        <path strokeLinecap="round" strokeLinejoin="round" d="M22 10.5h-6m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+    ),
+    download: (
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+    ),
+    loader: (
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+    ),
+    sun: (
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+    ),
+    moon: (
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+    ),
+    palmtree: (
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 21v-8.25M15.75 21H8.25M12 12.75c0 0-4.5-3-4.5-6.375A4.5 4.5 0 0112 2.25a4.5 4.5 0 014.5 4.125c0 3.375-4.5 6.375-4.5 6.375z" />
+    ),
 };
+
 
 export const Icon = ({ name, className = '', size = 24 }: IconProps) => (
     <svg

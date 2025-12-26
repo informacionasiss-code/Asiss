@@ -235,6 +235,7 @@ export interface AttendanceKPIs {
 // ==========================================
 
 export type AttendanceSubsection =
+  | 'asistencia-2026'
   | 'no-marcaciones'
   | 'sin-credenciales'
   | 'cambios-dia'
@@ -242,10 +243,12 @@ export type AttendanceSubsection =
   | 'vacaciones';
 
 export const SUBSECTION_LABELS: Record<AttendanceSubsection, string> = {
+  'asistencia-2026': 'Asistencia 2026',
   'no-marcaciones': 'No Marcaciones',
   'sin-credenciales': 'Sin Credenciales',
   'cambios-dia': 'Cambios de Día',
   'autorizaciones': 'Autorizaciones',
   'vacaciones': 'Vacaciones',
 };
+
 
