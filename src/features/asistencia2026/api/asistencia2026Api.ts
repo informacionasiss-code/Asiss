@@ -50,13 +50,10 @@ export async function fetchStaffWithShifts(
 ): Promise<StaffWithShift[]> {
     if (!isSupabaseConfigured()) return [];
 
+    // Fetch staff without embedded relation (embedded select not working)
     let query = supabase
         .from('staff')
-        .select(`
-      id, rut, nombre, cargo, terminal_code, turno, horario, contacto, status,
-      staff_shifts (id, staff_id, shift_type_code, variant_code, start_date),
-      staff_admonitions (id)
-    `)
+        .select('id, rut, nombre, cargo, terminal_code, turno, horario, contacto, status')
         .order('cargo')
         .order('nombre');
 
@@ -81,22 +78,48 @@ export async function fetchStaffWithShifts(
         query = query.or(`rut.ilike.${search},nombre.ilike.${search}`);
     }
 
-    const { data, error } = await query;
+    const { data: staffData, error: staffError } = await query;
+    if (staffError) throw staffError;
 
-    if (error) throw error;
+    // Fetch ALL staff_shifts separately
+    const { data: shiftsData, error: shiftsError } = await supabase
+        .from('staff_shifts')
+        .select('*');
 
-    const result = (data || []).map((staff: Record<string, unknown>) => {
-        const shiftData = Array.isArray(staff.staff_shifts) && staff.staff_shifts.length > 0
-            ? staff.staff_shifts[0] as StaffShift
-            : undefined;
+    // Log shifts fetch result
+    if (shiftsError) {
+        console.warn('fetchStaffWithShifts - Error fetching shifts:', shiftsError.message);
+    }
+    console.log('fetchStaffWithShifts - Fetched shifts:', shiftsData?.length ?? 0);
 
-        // Debug log to verify shift data is loading
-        if (shiftData) {
-            console.log('Staff with shift:', staff.nombre, '->', shiftData.shift_type_code, shiftData.variant_code);
+    // Build shifts map by staff_id
+    const shiftsMap = new Map<string, StaffShift>();
+    if (shiftsData) {
+        for (const shift of shiftsData) {
+            shiftsMap.set(shift.staff_id, shift as StaffShift);
+            console.log('Shift loaded:', shift.staff_id, '->', shift.shift_type_code, shift.variant_code);
         }
+    }
+
+    // Fetch admonitions count (simpler, just count)
+    const { data: admonitionsData } = await supabase
+        .from('staff_admonitions')
+        .select('staff_id');
+
+    const admonitionsMap = new Map<string, number>();
+    if (admonitionsData) {
+        for (const adm of admonitionsData) {
+            admonitionsMap.set(adm.staff_id, (admonitionsMap.get(adm.staff_id) || 0) + 1);
+        }
+    }
+
+    // Combine staff with shifts
+    const result = (staffData || []).map((staff: Record<string, unknown>) => {
+        const staffId = staff.id as string;
+        const shiftData = shiftsMap.get(staffId);
 
         return {
-            id: staff.id as string,
+            id: staffId,
             rut: staff.rut as string,
             nombre: staff.nombre as string,
             cargo: staff.cargo as string,
@@ -106,9 +129,7 @@ export async function fetchStaffWithShifts(
             contacto: staff.contacto as string,
             status: staff.status as StaffWithShift['status'],
             shift: shiftData,
-            admonitionCount: Array.isArray(staff.staff_admonitions)
-                ? staff.staff_admonitions.length
-                : 0,
+            admonitionCount: admonitionsMap.get(staffId) || 0,
         };
     });
 
