@@ -14,6 +14,7 @@ import {
     AttendanceLicense,
     AttendancePermission,
     ShiftType,
+    ShiftTypeCode,
     StaffShiftOverride,
     IncidenceCode,
     CARGO_ORDER,
@@ -35,6 +36,53 @@ import {
     useBulkMarkPresent,
 } from '../hooks';
 import { Icon } from '../../../shared/components/common/Icon';
+
+/**
+ * Fallback shift patterns when DB doesn't have shift_types data
+ */
+function getFallbackShiftType(code: ShiftTypeCode): ShiftType | undefined {
+    const fallbacks: Record<ShiftTypeCode, ShiftType> = {
+        '5X2_FIJO': {
+            id: '1',
+            code: '5X2_FIJO',
+            name: '5x2 Fijo',
+            pattern_json: { type: 'fixed', description: 'Lun-Vie trabaja', offDays: [6, 0] },
+            created_at: '',
+        },
+        '5X2_ROTATIVO': {
+            id: '2',
+            code: '5X2_ROTATIVO',
+            name: '5x2 Rotativo',
+            pattern_json: {
+                type: 'rotating',
+                description: 'Rotativo 2 semanas',
+                cycle: 2,
+                weeks: [{ offDays: [3, 0] }, { offDays: [5, 6] }],
+            },
+            created_at: '',
+        },
+        '5X2_SUPER': {
+            id: '3',
+            code: '5X2_SUPER',
+            name: '5x2 Super',
+            pattern_json: {
+                type: 'rotating',
+                description: 'Super 2 semanas',
+                cycle: 2,
+                weeks: [{ offDays: [3, 0] }, { offDays: [4, 5] }],
+            },
+            created_at: '',
+        },
+        'ESPECIAL': {
+            id: '4',
+            code: 'ESPECIAL',
+            name: 'Especial',
+            pattern_json: { type: 'manual', description: 'Manual 28 dias', cycleDays: 28 },
+            created_at: '',
+        },
+    };
+    return fallbacks[code];
+}
 
 interface IncidenceMap {
     noMarcaciones: { rut: string; date: string }[];
@@ -173,17 +221,27 @@ export const AttendanceGrid = ({
 
         // Calculate off day based on shift pattern
         let isOff = false;
-        let horario = s.horario;
+        const horario = s.horario;
         const turno = getTurnoFromHorario(s.horario);
+        const dayOfWeek = new Date(date + 'T12:00:00').getDay();
 
         if (s.shift) {
-            const shiftType = shiftTypesMap.get(s.shift.shift_type_code);
+            // Get pattern from DB or use fallback
+            let shiftType = shiftTypesMap.get(s.shift.shift_type_code);
+
+            // Fallback patterns if DB doesn't have data
+            if (!shiftType?.pattern_json) {
+                shiftType = getFallbackShiftType(s.shift.shift_type_code);
+            }
+
             if (shiftType?.pattern_json) {
                 isOff = isOffDay(date, s.shift.shift_type_code, s.shift.variant_code, shiftType.pattern_json, undefined, override);
+            } else {
+                // Last resort fallback: Sat/Sun off
+                isOff = dayOfWeek === 0 || dayOfWeek === 6;
             }
         } else {
             // No shift assigned - use default 5x2 (Sat/Sun off)
-            const dayOfWeek = new Date(date + 'T12:00:00').getDay();
             isOff = dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
         }
 
