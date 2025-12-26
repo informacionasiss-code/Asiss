@@ -85,23 +85,35 @@ export async function fetchStaffWithShifts(
 
     if (error) throw error;
 
-    return (data || []).map((staff: Record<string, unknown>) => ({
-        id: staff.id as string,
-        rut: staff.rut as string,
-        nombre: staff.nombre as string,
-        cargo: staff.cargo as string,
-        terminal_code: staff.terminal_code as StaffWithShift['terminal_code'],
-        turno: staff.turno as string,
-        horario: staff.horario as string,
-        contacto: staff.contacto as string,
-        status: staff.status as StaffWithShift['status'],
-        shift: Array.isArray(staff.staff_shifts) && staff.staff_shifts.length > 0
+    const result = (data || []).map((staff: Record<string, unknown>) => {
+        const shiftData = Array.isArray(staff.staff_shifts) && staff.staff_shifts.length > 0
             ? staff.staff_shifts[0] as StaffShift
-            : undefined,
-        admonitionCount: Array.isArray(staff.staff_admonitions)
-            ? staff.staff_admonitions.length
-            : 0,
-    }));
+            : undefined;
+
+        // Debug log to verify shift data is loading
+        if (shiftData) {
+            console.log('Staff with shift:', staff.nombre, '->', shiftData.shift_type_code, shiftData.variant_code);
+        }
+
+        return {
+            id: staff.id as string,
+            rut: staff.rut as string,
+            nombre: staff.nombre as string,
+            cargo: staff.cargo as string,
+            terminal_code: staff.terminal_code as StaffWithShift['terminal_code'],
+            turno: staff.turno as string,
+            horario: staff.horario as string,
+            contacto: staff.contacto as string,
+            status: staff.status as StaffWithShift['status'],
+            shift: shiftData,
+            admonitionCount: Array.isArray(staff.staff_admonitions)
+                ? staff.staff_admonitions.length
+                : 0,
+        };
+    });
+
+    console.log('fetchStaffWithShifts - Loaded', result.length, 'staff, with shifts:', result.filter(s => s.shift).length);
+    return result;
 }
 
 // ==========================================
@@ -150,17 +162,28 @@ export async function upsertStaffShift(values: StaffShiftFormValues): Promise<St
 // SPECIAL TEMPLATES
 // ==========================================
 
-export async function fetchSpecialTemplate(staffId: string): Promise<StaffShiftSpecialTemplate | null> {
+export async function fetchSpecialTemplate(
+    staffId: string
+): Promise<StaffShiftSpecialTemplate | null> {
     if (!isSupabaseConfigured()) return null;
 
-    const { data, error } = await supabase
-        .from('staff_shift_special_templates')
-        .select('*')
-        .eq('staff_id', staffId)
-        .single();
+    try {
+        const { data, error } = await supabase
+            .from('staff_shift_special_templates')
+            .select('*')
+            .eq('staff_id', staffId)
+            .single();
 
-    if (error && error.code !== 'PGRST116') throw error;
-    return data || null;
+        // PGRST116 = not found, 406 = table RLS issue - both should return null
+        if (error && (error.code !== 'PGRST116' && error.code !== '406')) {
+            console.warn('fetchSpecialTemplate error (ignoring):', error.code, error.message);
+            return null;
+        }
+        return data || null;
+    } catch (err) {
+        console.warn('fetchSpecialTemplate exception (ignoring):', err);
+        return null;
+    }
 }
 
 export async function upsertSpecialTemplate(
