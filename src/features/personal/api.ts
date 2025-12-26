@@ -109,6 +109,12 @@ export const createStaff = async (values: StaffFormValues): Promise<Staff> => {
             turno: values.turno.trim(),
             horario: values.horario.trim(),
             contacto: values.contacto.trim(),
+            email: values.email?.trim() || null,
+            talla_polera: values.talla_polera?.trim() || null,
+            talla_chaqueta: values.talla_chaqueta?.trim() || null,
+            talla_pantalon: values.talla_pantalon?.trim() || null,
+            talla_zapato_seguridad: values.talla_zapato_seguridad?.trim() || null,
+            talla_chaleco_reflectante: values.talla_chaleco_reflectante?.trim() || null,
         })
         .select()
         .single();
@@ -133,6 +139,12 @@ export const updateStaff = async (id: string, values: Partial<StaffFormValues>):
     if (values.turno !== undefined) updateData.turno = values.turno.trim();
     if (values.horario !== undefined) updateData.horario = values.horario.trim();
     if (values.contacto !== undefined) updateData.contacto = values.contacto.trim();
+    if (values.email !== undefined) updateData.email = values.email?.trim() || null;
+    if (values.talla_polera !== undefined) updateData.talla_polera = values.talla_polera?.trim() || null;
+    if (values.talla_chaqueta !== undefined) updateData.talla_chaqueta = values.talla_chaqueta?.trim() || null;
+    if (values.talla_pantalon !== undefined) updateData.talla_pantalon = values.talla_pantalon?.trim() || null;
+    if (values.talla_zapato_seguridad !== undefined) updateData.talla_zapato_seguridad = values.talla_zapato_seguridad?.trim() || null;
+    if (values.talla_chaleco_reflectante !== undefined) updateData.talla_chaleco_reflectante = values.talla_chaleco_reflectante?.trim() || null;
 
     const { data, error } = await supabase
         .from('staff')

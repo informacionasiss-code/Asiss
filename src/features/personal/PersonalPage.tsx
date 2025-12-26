@@ -61,16 +61,24 @@ export const PersonalPage = () => {
   // Realtime subscription
   useStaffRealtime(terminalContext);
 
-  // Export columns
+  // Export columns - COMPLETE export with all fields
   const exportColumns = [
     { key: 'rut', header: 'RUT', value: (row: StaffViewModel) => formatRut(row.rut) },
-    { key: 'nombre', header: 'Nombre', value: (row: StaffViewModel) => row.nombre },
-    { key: 'cargo', header: 'Cargo', value: (row: StaffViewModel) => row.cargo },
-    { key: 'terminal_code', header: 'Terminal', value: (row: StaffViewModel) => displayTerminal(row.terminal_code) },
-    { key: 'turno', header: 'Turno', value: (row: StaffViewModel) => row.turno },
-    { key: 'horario', header: 'Horario', value: (row: StaffViewModel) => row.horario },
-    { key: 'contacto', header: 'Contacto', value: (row: StaffViewModel) => row.contacto },
-    { key: 'status', header: 'Estado', value: (row: StaffViewModel) => row.status },
+    { key: 'nombre', header: 'NOMBRE', value: (row: StaffViewModel) => row.nombre },
+    { key: 'cargo', header: 'CARGO', value: (row: StaffViewModel) => row.cargo },
+    { key: 'terminal_code', header: 'TERMINAL', value: (row: StaffViewModel) => displayTerminal(row.terminal_code) },
+    { key: 'turno', header: 'TURNO', value: (row: StaffViewModel) => row.turno },
+    { key: 'horario', header: 'HORARIO', value: (row: StaffViewModel) => row.horario },
+    { key: 'contacto', header: 'CONTACTO', value: (row: StaffViewModel) => row.contacto },
+    { key: 'email', header: 'CORREO', value: (row: StaffViewModel) => row.email || '' },
+    { key: 'talla_polera', header: 'TALLA_POLERA', value: (row: StaffViewModel) => row.talla_polera || '' },
+    { key: 'talla_chaqueta', header: 'TALLA_CHAQUETA', value: (row: StaffViewModel) => row.talla_chaqueta || '' },
+    { key: 'talla_pantalon', header: 'TALLA_PANTALON', value: (row: StaffViewModel) => row.talla_pantalon || '' },
+    { key: 'talla_zapato_seguridad', header: 'TALLA_ZAPATO_SEGURIDAD', value: (row: StaffViewModel) => row.talla_zapato_seguridad || '' },
+    { key: 'talla_chaleco_reflectante', header: 'TALLA_CHALECO_REFLECTANTE', value: (row: StaffViewModel) => row.talla_chaleco_reflectante || '' },
+    { key: 'status', header: 'ESTADO', value: (row: StaffViewModel) => row.status },
+    { key: 'terminated_at', header: 'FECHA_DESVINCULACION', value: (row: StaffViewModel) => row.terminated_at ? new Date(row.terminated_at).toLocaleDateString('es-CL') : '' },
+    { key: 'termination_comment', header: 'COMENTARIO_DESVINCULACION', value: (row: StaffViewModel) => row.termination_comment || '' },
   ];
 
   const handleExportView = () => {

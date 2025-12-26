@@ -13,6 +13,14 @@ interface Props {
 }
 
 const TURNO_OPTIONS = ['Mañana', 'Tarde', 'Noche', 'Rotativo'];
+const TALLA_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+const TALLA_ZAPATO_OPTIONS = ['35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46'];
+
+const validateEmail = (email: string): boolean => {
+    if (!email) return true; // Empty is valid (optional field)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+};
 
 export const StaffForm = ({ initialData, onSubmit, onCancel, isLoading }: Props) => {
     const [formData, setFormData] = useState<StaffFormValues>({
@@ -23,10 +31,18 @@ export const StaffForm = ({ initialData, onSubmit, onCancel, isLoading }: Props)
         turno: 'Mañana',
         horario: '08:00-18:00',
         contacto: '',
+        email: '',
+        talla_polera: '',
+        talla_chaqueta: '',
+        talla_pantalon: '',
+        talla_zapato_seguridad: '',
+        talla_chaleco_reflectante: '',
     });
 
     const [rutError, setRutError] = useState<string | null>(null);
+    const [emailError, setEmailError] = useState<string | null>(null);
     const [rutDisplay, setRutDisplay] = useState('');
+    const [tallasExpanded, setTallasExpanded] = useState(false);
 
     useEffect(() => {
         if (initialData) {
@@ -38,8 +54,18 @@ export const StaffForm = ({ initialData, onSubmit, onCancel, isLoading }: Props)
                 turno: initialData.turno,
                 horario: initialData.horario,
                 contacto: initialData.contacto,
+                email: initialData.email || '',
+                talla_polera: initialData.talla_polera || '',
+                talla_chaqueta: initialData.talla_chaqueta || '',
+                talla_pantalon: initialData.talla_pantalon || '',
+                talla_zapato_seguridad: initialData.talla_zapato_seguridad || '',
+                talla_chaleco_reflectante: initialData.talla_chaleco_reflectante || '',
             });
             setRutDisplay(formatRut(initialData.rut));
+            // Expand tallas section if any talla field has data
+            const hasTallas = initialData.email || initialData.talla_polera || initialData.talla_chaqueta ||
+                initialData.talla_pantalon || initialData.talla_zapato_seguridad || initialData.talla_chaleco_reflectante;
+            setTallasExpanded(Boolean(hasTallas));
         }
     }, [initialData]);
 
@@ -60,6 +86,15 @@ export const StaffForm = ({ initialData, onSubmit, onCancel, isLoading }: Props)
         }
     };
 
+    const handleEmailChange = (value: string) => {
+        setFormData((prev) => ({ ...prev, email: value }));
+        if (value && !validateEmail(value)) {
+            setEmailError('Formato de correo inválido');
+        } else {
+            setEmailError(null);
+        }
+    };
+
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
 
@@ -69,10 +104,40 @@ export const StaffForm = ({ initialData, onSubmit, onCancel, isLoading }: Props)
             return;
         }
 
+        if (formData.email && !validateEmail(formData.email)) {
+            setEmailError('Formato de correo inválido');
+            return;
+        }
+
         onSubmit(formData);
     };
 
     const isEdit = Boolean(initialData);
+
+    const renderTallaSelect = (
+        label: string,
+        field: keyof StaffFormValues,
+        options: string[]
+    ) => (
+        <div>
+            <label className="label">{label}</label>
+            <div className="relative">
+                <input
+                    type="text"
+                    className="input"
+                    list={`${field}-options`}
+                    value={formData[field] || ''}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, [field]: e.target.value }))}
+                    placeholder="Seleccionar o escribir..."
+                />
+                <datalist id={`${field}-options`}>
+                    {options.map((opt) => (
+                        <option key={opt} value={opt} />
+                    ))}
+                </datalist>
+            </div>
+        </div>
+    );
 
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -200,12 +265,57 @@ export const StaffForm = ({ initialData, onSubmit, onCancel, isLoading }: Props)
                 />
             </div>
 
+            {/* Tallas y Correo - Collapsible Section */}
+            <div className="border border-slate-200 rounded-lg overflow-hidden">
+                <button
+                    type="button"
+                    onClick={() => setTallasExpanded(!tallasExpanded)}
+                    className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors"
+                >
+                    <span className="font-medium text-slate-700 flex items-center gap-2">
+                        <Icon name="tag" size={18} />
+                        Tallas y Correo
+                    </span>
+                    <Icon
+                        name="chevron-down"
+                        size={18}
+                        className={`text-slate-500 transition-transform ${tallasExpanded ? 'rotate-180' : ''}`}
+                    />
+                </button>
+
+                {tallasExpanded && (
+                    <div className="p-4 space-y-4 bg-white">
+                        {/* Email */}
+                        <div>
+                            <label className="label">Correo Electrónico</label>
+                            <input
+                                type="email"
+                                className={`input ${emailError ? 'border-danger-500 focus:ring-danger-500' : ''}`}
+                                value={formData.email || ''}
+                                onChange={(e) => handleEmailChange(e.target.value)}
+                                placeholder="trabajador@ejemplo.com"
+                            />
+                            {emailError && <p className="mt-1 text-xs text-danger-600">{emailError}</p>}
+                        </div>
+
+                        {/* Tallas Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {renderTallaSelect('Talla Polera', 'talla_polera', TALLA_OPTIONS)}
+                            {renderTallaSelect('Talla Chaqueta', 'talla_chaqueta', TALLA_OPTIONS)}
+                            {renderTallaSelect('Talla Pantalón', 'talla_pantalon', TALLA_OPTIONS)}
+                            {renderTallaSelect('Talla Zapato de Seguridad', 'talla_zapato_seguridad', TALLA_ZAPATO_OPTIONS)}
+                            {renderTallaSelect('Talla Chaleco Reflectante', 'talla_chaleco_reflectante', TALLA_OPTIONS)}
+                        </div>
+                    </div>
+                )}
+            </div>
+
             {/* Actions */}
             <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
                 <button type="button" onClick={onCancel} className="btn btn-secondary" disabled={isLoading}>
                     Cancelar
                 </button>
-                <button type="submit" className="btn btn-primary" disabled={isLoading || Boolean(rutError)}>
+                <button type="submit" className="btn btn-primary" disabled={isLoading || Boolean(rutError) || Boolean(emailError)}>
                     {isLoading ? (
                         <span className="flex items-center gap-2">
                             <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -236,3 +346,4 @@ export const StaffForm = ({ initialData, onSubmit, onCancel, isLoading }: Props)
         </form>
     );
 };
+

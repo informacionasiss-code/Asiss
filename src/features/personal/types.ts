@@ -40,6 +40,12 @@ export interface Staff {
   turno: string;
   horario: string;
   contacto: string;
+  email: string | null;
+  talla_polera: string | null;
+  talla_chaqueta: string | null;
+  talla_pantalon: string | null;
+  talla_zapato_seguridad: string | null;
+  talla_chaleco_reflectante: string | null;
   status: StaffStatus;
   terminated_at: string | null;
   termination_comment: string | null;
@@ -76,6 +82,12 @@ export interface StaffFormValues {
   turno: string;
   horario: string;
   contacto: string;
+  email?: string;
+  talla_polera?: string;
+  talla_chaqueta?: string;
+  talla_pantalon?: string;
+  talla_zapato_seguridad?: string;
+  talla_chaleco_reflectante?: string;
 }
 
 export interface AdmonitionFormValues {

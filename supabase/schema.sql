@@ -550,3 +550,16 @@ ON CONFLICT (trigger) DO NOTHING;
 -- Public: false
 -- Allowed types: pdf, jpg, png
 -- =============================================
+
+-- =============================================
+-- PERSONAL (ALTER: tallas y correo)
+-- Agregado: 2025-12-26
+-- Campos NULLables para compatibilidad con registros existentes
+-- =============================================
+
+ALTER TABLE staff ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE staff ADD COLUMN IF NOT EXISTS talla_polera TEXT;
+ALTER TABLE staff ADD COLUMN IF NOT EXISTS talla_chaqueta TEXT;
+ALTER TABLE staff ADD COLUMN IF NOT EXISTS talla_pantalon TEXT;
+ALTER TABLE staff ADD COLUMN IF NOT EXISTS talla_zapato_seguridad TEXT;
+ALTER TABLE staff ADD COLUMN IF NOT EXISTS talla_chaleco_reflectante TEXT;
