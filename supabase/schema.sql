@@ -1162,6 +1162,17 @@ INSERT INTO shift_types (code, name, pattern_json) VALUES
     "type": "manual",
     "description": "Plantilla de 28 días definida manualmente",
     "cycleDays": 28
+  }'::jsonb),
+  ('SUPERVISOR_RELEVO', 'Supervisor Relevo', '{
+    "type": "rotating",
+    "description": "Cubre supervisores día/noche. Sem 1: 2 libres, Sem 2: 3 libres (Jue-Vie-Sab)",
+    "cycle": 2,
+    "weeks": [
+      {"offDays": [0, 3]},
+      {"offDays": [4, 5, 6]}
+    ],
+    "coversBoth": true,
+    "noDoubleShift": true
   }'::jsonb)
 ON CONFLICT (code) DO NOTHING;
 

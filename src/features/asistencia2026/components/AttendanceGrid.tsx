@@ -80,6 +80,18 @@ function getFallbackShiftType(code: ShiftTypeCode): ShiftType | undefined {
             pattern_json: { type: 'manual', description: 'Manual 28 dias', cycleDays: 28 },
             created_at: '',
         },
+        'SUPERVISOR_RELEVO': {
+            id: '5',
+            code: 'SUPERVISOR_RELEVO',
+            name: 'Supervisor Relevo',
+            pattern_json: {
+                type: 'rotating',
+                description: 'Sem 1: 2 libres, Sem 2: 3 libres',
+                cycle: 2,
+                weeks: [{ offDays: [0, 3] }, { offDays: [4, 5, 6] }],
+            },
+            created_at: '',
+        },
     };
     return fallbacks[code];
 }

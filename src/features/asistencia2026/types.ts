@@ -4,8 +4,8 @@ import { TerminalCode } from '../../shared/types/terminal';
 // SHIFT TYPES
 // ==========================================
 
-export type ShiftTypeCode = '5X2_FIJO' | '5X2_ROTATIVO' | '5X2_SUPER' | 'ESPECIAL';
-export type VariantCode = 'PRINCIPAL' | 'CONTRATURNO' | 'SUPER' | 'FIJO' | 'ESPECIAL';
+export type ShiftTypeCode = '5X2_FIJO' | '5X2_ROTATIVO' | '5X2_SUPER' | 'ESPECIAL' | 'SUPERVISOR_RELEVO';
+export type VariantCode = 'PRINCIPAL' | 'CONTRATURNO' | 'SUPER' | 'FIJO' | 'ESPECIAL' | 'RELEVO';
 
 export interface ShiftType {
     id: string;
@@ -266,6 +266,7 @@ export const SHIFT_TYPE_LABELS: Record<ShiftTypeCode, string> = {
     '5X2_ROTATIVO': '5x2 Rotativo',
     '5X2_SUPER': '5x2 Super',
     'ESPECIAL': 'Especial (Manual)',
+    'SUPERVISOR_RELEVO': 'Supervisor Relevo',
 };
 
 export const VARIANT_LABELS: Record<VariantCode, string> = {
@@ -274,6 +275,7 @@ export const VARIANT_LABELS: Record<VariantCode, string> = {
     'SUPER': 'Super',
     'FIJO': 'Fijo',
     'ESPECIAL': 'Especial',
+    'RELEVO': 'Relevo',
 };
 
 export const STATUS_COLORS: Record<DayStatusType, string> = {
