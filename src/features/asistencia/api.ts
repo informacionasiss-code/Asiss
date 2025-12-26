@@ -886,6 +886,7 @@ export const updateVacacion = async (
 import { emailService } from '../../shared/services/emailService';
 import { displayTerminal } from '../../shared/utils/terminal';
 import { fetchAppConfig, EmailConfig } from '../settings/api';
+import { formatRut } from '../personal/utils/rutUtils';
 
 const EMAIL_RECIPIENT = 'isaac.avila@transdev.cl';
 
@@ -987,7 +988,7 @@ export const sendAuthorizationEmail = async (
         <!-- Data Table -->
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; border-spacing: 0; border-collapse: separate;">
             ${generateDataRow(SVG_ICONS.id, 'Subsección', subsection, true)}
-            ${generateDataRow(SVG_ICONS.id, 'RUT', rut)}
+            ${generateDataRow(SVG_ICONS.id, 'RUT', formatRut(rut))}
             ${generateDataRow(SVG_ICONS.user, 'Trabajador', nombre)}
             ${generateDataRow(SVG_ICONS.building, 'Terminal', displayTerminal(terminal as any))}
             ${generateDataRow(SVG_ICONS.calendar, 'Fecha', formatDate(date))}
@@ -1030,8 +1031,17 @@ export const sendRecordCreatedEmail = async (
             .join('')
         : '';
 
-    const subject = `Nuevo Registro: ${subsection} - ${data.nombre}`;
+    const subject = `Nuevo Registro: ${subsection}`;
     const body = `
+        <!-- Worker Name Header -->
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 24px;">
+            <tr>
+                <td align="center">
+                    <h2 style="margin: 0; font-size: 24px; font-weight: 800; color: #0f172a;">${data.nombre}</h2>
+                </td>
+            </tr>
+        </table>
+        
         <!-- Status Banner -->
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 24px;">
             <tr>
@@ -1064,7 +1074,7 @@ export const sendRecordCreatedEmail = async (
         
         <!-- Data Table -->
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; border-spacing: 0; border-collapse: separate;">
-            ${generateDataRow(SVG_ICONS.id, 'RUT', data.rut)}
+            ${generateDataRow(SVG_ICONS.id, 'RUT', formatRut(data.rut))}
             ${generateDataRow(SVG_ICONS.user, 'Trabajador', data.nombre, true)}
             ${generateDataRow(SVG_ICONS.building, 'Terminal', displayTerminal(data.terminal as any))}
             ${generateDataRow(SVG_ICONS.calendar, 'Fecha', formatDate(data.date))}
