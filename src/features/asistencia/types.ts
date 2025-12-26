@@ -166,6 +166,49 @@ export interface AutorizacionFormValues {
 }
 
 // ==========================================
+// VACACIONES
+// ==========================================
+
+export interface Vacacion extends AttendanceBase {
+  cargo: string;
+  turno: string;
+  start_date: string;
+  end_date: string;
+  return_date: string;
+  calendar_days: number;
+  business_days: number;
+  has_conflict: boolean;
+  conflict_authorized: boolean;
+  conflict_details: string | null;
+}
+
+export interface VacacionFormValues {
+  rut: string;
+  nombre: string;
+  cargo: string;
+  terminal_code: TerminalCode;
+  turno: string;
+  start_date: string;
+  end_date: string;
+  return_date: string;
+  conflict_authorized: boolean;
+}
+
+export interface VacationConflictInfo {
+  hasConflict: boolean;
+  conflictingVacations: {
+    nombre: string;
+    cargo: string;
+    turno: string;
+    start_date: string;
+    end_date: string;
+  }[];
+  totalStaffCount: number;
+  availableStaffCount: number;
+  overlappingDays: number;
+}
+
+// ==========================================
 // FILTERS
 // ==========================================
 
@@ -195,11 +238,14 @@ export type AttendanceSubsection =
   | 'no-marcaciones'
   | 'sin-credenciales'
   | 'cambios-dia'
-  | 'autorizaciones';
+  | 'autorizaciones'
+  | 'vacaciones';
 
 export const SUBSECTION_LABELS: Record<AttendanceSubsection, string> = {
   'no-marcaciones': 'No Marcaciones',
   'sin-credenciales': 'Sin Credenciales',
   'cambios-dia': 'Cambios de Día',
   'autorizaciones': 'Autorizaciones',
+  'vacaciones': 'Vacaciones',
 };
+

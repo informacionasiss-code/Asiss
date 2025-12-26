@@ -563,3 +563,65 @@ ALTER TABLE staff ADD COLUMN IF NOT EXISTS talla_chaqueta TEXT;
 ALTER TABLE staff ADD COLUMN IF NOT EXISTS talla_pantalon TEXT;
 ALTER TABLE staff ADD COLUMN IF NOT EXISTS talla_zapato_seguridad TEXT;
 ALTER TABLE staff ADD COLUMN IF NOT EXISTS talla_chaleco_reflectante TEXT;
+
+-- =============================================
+-- ASISTENCIA (ALTER: Vacaciones Inteligentes)
+-- Agregado: 2025-12-26
+-- Sistema de gestión de vacaciones con detección de conflictos
+-- =============================================
+
+-- Tabla: Vacaciones
+CREATE TABLE attendance_vacaciones (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- Worker info (from staff lookup)
+  rut TEXT NOT NULL,
+  nombre TEXT NOT NULL,
+  cargo TEXT NOT NULL,
+  terminal_code TEXT NOT NULL,
+  turno TEXT NOT NULL,
+  
+  -- Vacation dates
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  return_date DATE NOT NULL,
+  
+  -- Calculated fields
+  calendar_days INT NOT NULL,
+  business_days INT NOT NULL,
+  
+  -- Conflict info
+  has_conflict BOOLEAN DEFAULT false,
+  conflict_authorized BOOLEAN DEFAULT false,
+  conflict_details TEXT,
+  
+  -- Authorization workflow
+  auth_status auth_status_enum NOT NULL DEFAULT 'PENDIENTE',
+  authorized_by TEXT,
+  authorized_at TIMESTAMPTZ,
+  rejection_reason TEXT,
+  created_by_supervisor TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Indexes for vacaciones
+CREATE INDEX idx_vacaciones_rut ON attendance_vacaciones(rut);
+CREATE INDEX idx_vacaciones_terminal ON attendance_vacaciones(terminal_code);
+CREATE INDEX idx_vacaciones_cargo ON attendance_vacaciones(cargo);
+CREATE INDEX idx_vacaciones_turno ON attendance_vacaciones(turno);
+CREATE INDEX idx_vacaciones_dates ON attendance_vacaciones(start_date, end_date);
+CREATE INDEX idx_vacaciones_status ON attendance_vacaciones(auth_status);
+
+-- Trigger for updated_at
+CREATE TRIGGER update_vacaciones_updated_at
+  BEFORE UPDATE ON attendance_vacaciones
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Enable Realtime
+ALTER PUBLICATION supabase_realtime ADD TABLE attendance_vacaciones;
+
+-- RLS (permissive for development)
+ALTER TABLE attendance_vacaciones ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all for vacaciones" ON attendance_vacaciones FOR ALL USING (true) WITH CHECK (true);
+

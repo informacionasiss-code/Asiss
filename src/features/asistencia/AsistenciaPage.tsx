@@ -4,6 +4,7 @@ import { NoMarcacionesPage } from './pages/NoMarcacionesPage';
 import { SinCredencialesPage } from './pages/SinCredencialesPage';
 import { CambiosDeDiaPage } from './pages/CambiosDeDiaPage';
 import { AutorizacionesPage } from './pages/AutorizacionesPage';
+import { VacacionesPage } from './pages/VacacionesPage';
 import { AttendanceSubsection } from './types';
 
 const TABS: { id: AttendanceSubsection; label: string; icon: IconName }[] = [
@@ -11,6 +12,7 @@ const TABS: { id: AttendanceSubsection; label: string; icon: IconName }[] = [
   { id: 'sin-credenciales', label: 'Sin Credenciales', icon: 'key' },
   { id: 'cambios-dia', label: 'Cambios de Día', icon: 'calendar' },
   { id: 'autorizaciones', label: 'Autorizaciones', icon: 'check-circle' },
+  { id: 'vacaciones', label: 'Vacaciones', icon: 'sparkles' },
 ];
 
 import { EmailConfigModal } from '../settings/components/EmailConfigModal';
@@ -29,6 +31,8 @@ export const AsistenciaPage = () => {
         return <CambiosDeDiaPage />;
       case 'autorizaciones':
         return <AutorizacionesPage />;
+      case 'vacaciones':
+        return <VacacionesPage />;
       default:
         return null;
     }
@@ -70,3 +74,4 @@ export const AsistenciaPage = () => {
     </div>
   );
 };
+

@@ -6,14 +6,17 @@ import {
     fetchSinCredenciales,
     fetchCambiosDia,
     fetchAutorizaciones,
+    fetchVacaciones,
     createNoMarcacion,
     createSinCredencial,
     createCambioDia,
     createAutorizacion,
+    createVacacion,
     updateNoMarcacion,
     updateSinCredencial,
     updateCambioDia,
     updateAutorizacion,
+    updateVacacion,
     authorizeRecord,
     rejectRecord,
     fetchKPIs,
@@ -26,6 +29,7 @@ import {
     SinCredencialFormValues,
     CambioDiaFormValues,
     AutorizacionFormValues,
+    VacacionFormValues,
     AttendanceSubsection,
     SUBSECTION_LABELS,
 } from './types';
@@ -44,6 +48,8 @@ export const attendanceKeys = {
         [...attendanceKeys.all, 'cambios-dia', ctx, filters] as const,
     autorizaciones: (ctx: TerminalContext, filters?: AttendanceFilters) =>
         [...attendanceKeys.all, 'autorizaciones', ctx, filters] as const,
+    vacaciones: (ctx: TerminalContext, filters?: AttendanceFilters) =>
+        [...attendanceKeys.all, 'vacaciones', ctx, filters] as const,
     kpis: (subsection: AttendanceSubsection, ctx: TerminalContext) =>
         [...attendanceKeys.all, 'kpis', subsection, ctx] as const,
 };
@@ -76,23 +82,31 @@ export const useAutorizaciones = (ctx: TerminalContext, filters?: AttendanceFilt
         queryFn: () => fetchAutorizaciones(ctx, filters),
     });
 
+export const useVacaciones = (ctx: TerminalContext, filters?: AttendanceFilters) =>
+    useQuery({
+        queryKey: attendanceKeys.vacaciones(ctx, filters),
+        queryFn: () => fetchVacaciones(ctx, filters),
+    });
+
 // ==========================================
 // KPI QUERIES
 // ==========================================
 
-const TABLE_NAMES = {
+const TABLE_NAMES: Record<AttendanceSubsection, string> = {
     'no-marcaciones': 'attendance_no_marcaciones',
     'sin-credenciales': 'attendance_sin_credenciales',
     'cambios-dia': 'attendance_cambios_dia',
     'autorizaciones': 'attendance_autorizaciones',
-} as const;
+    'vacaciones': 'attendance_vacaciones',
+};
 
-const DATE_COLUMNS = {
+const DATE_COLUMNS: Record<AttendanceSubsection, string> = {
     'no-marcaciones': 'date',
     'sin-credenciales': 'date',
     'cambios-dia': 'date',
     'autorizaciones': 'authorization_date',
-} as const;
+    'vacaciones': 'start_date',
+};
 
 export const useAttendanceKPIs = (subsection: AttendanceSubsection, ctx: TerminalContext) =>
     useQuery({
@@ -140,6 +154,15 @@ export const useCreateAutorizacion = () => {
     });
 };
 
+export const useCreateVacacion = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ values, createdBy }: { values: VacacionFormValues; createdBy: string }) =>
+            createVacacion(values, createdBy),
+        onSuccess: () => qc.invalidateQueries({ queryKey: attendanceKeys.all }),
+    });
+};
+
 // ==========================================
 // UPDATE MUTATIONS
 // ==========================================
@@ -176,6 +199,15 @@ export const useUpdateAutorizacion = () => {
     return useMutation({
         mutationFn: ({ id, values }: { id: string; values: Partial<AutorizacionFormValues> }) =>
             updateAutorizacion(id, values),
+        onSuccess: () => qc.invalidateQueries({ queryKey: attendanceKeys.all }),
+    });
+};
+
+export const useUpdateVacacion = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, values }: { id: string; values: Partial<VacacionFormValues> }) =>
+            updateVacacion(id, values),
         onSuccess: () => qc.invalidateQueries({ queryKey: attendanceKeys.all }),
     });
 };
@@ -257,3 +289,4 @@ export const useAttendanceRealtime = () => {
         };
     }, [qc]);
 };
+

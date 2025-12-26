@@ -12,6 +12,9 @@ import {
     CambioDiaFormValues,
     Autorizacion,
     AutorizacionFormValues,
+    Vacacion,
+    VacacionFormValues,
+    VacationConflictInfo,
     AttendanceFilters,
     AttendanceKPIs,
     AuthStatus,
@@ -25,7 +28,8 @@ type AttendanceTable =
     | 'attendance_no_marcaciones'
     | 'attendance_sin_credenciales'
     | 'attendance_cambios_dia'
-    | 'attendance_autorizaciones';
+    | 'attendance_autorizaciones'
+    | 'attendance_vacaciones';
 
 // ==========================================
 // NO MARCACIONES
@@ -603,11 +607,276 @@ export const subscribeToAttendanceChanges = (
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'attendance_cambios_dia' }, () => onUpdate('attendance_cambios_dia'))
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'attendance_autorizaciones' }, () => onInsert('attendance_autorizaciones'))
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'attendance_autorizaciones' }, () => onUpdate('attendance_autorizaciones'))
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'attendance_vacaciones' }, () => onInsert('attendance_vacaciones'))
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'attendance_vacaciones' }, () => onUpdate('attendance_vacaciones'))
         .subscribe();
 
     return () => {
         supabase.removeChannel(channel);
     };
+};
+
+// ==========================================
+// VACACIONES
+// ==========================================
+
+/**
+ * Calculate business days between two dates (excludes weekends)
+ */
+export const calculateBusinessDays = (startDate: string, endDate: string): number => {
+    const start = new Date(startDate + 'T12:00:00');
+    const end = new Date(endDate + 'T12:00:00');
+    let count = 0;
+    const current = new Date(start);
+
+    while (current <= end) {
+        const day = current.getDay();
+        if (day !== 0 && day !== 6) { // Skip Sunday (0) and Saturday (6)
+            count++;
+        }
+        current.setDate(current.getDate() + 1);
+    }
+
+    return count;
+};
+
+/**
+ * Calculate calendar days between two dates
+ */
+export const calculateCalendarDays = (startDate: string, endDate: string): number => {
+    const start = new Date(startDate + 'T12:00:00');
+    const end = new Date(endDate + 'T12:00:00');
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both days
+};
+
+/**
+ * Get active staff count by cargo, terminal, and turno
+ */
+export const getStaffCountByPosition = async (
+    cargo: string,
+    terminalCode: string,
+    turno: string
+): Promise<number> => {
+    const { count, error } = await supabase
+        .from('staff')
+        .select('*', { count: 'exact', head: true })
+        .eq('cargo', cargo)
+        .eq('terminal_code', terminalCode)
+        .eq('turno', turno)
+        .eq('status', 'ACTIVO');
+
+    if (error) throw error;
+    return count ?? 0;
+};
+
+/**
+ * Check for vacation conflicts (same cargo, terminal, turno with overlapping dates)
+ */
+export const checkVacationConflicts = async (
+    cargo: string,
+    terminalCode: string,
+    turno: string,
+    startDate: string,
+    endDate: string,
+    excludeRut?: string
+): Promise<VacationConflictInfo> => {
+    // Get overlapping vacations (approved or pending)
+    let query = supabase
+        .from('attendance_vacaciones')
+        .select('*')
+        .eq('cargo', cargo)
+        .eq('terminal_code', terminalCode)
+        .eq('turno', turno)
+        .in('auth_status', ['PENDIENTE', 'AUTORIZADO'])
+        .lte('start_date', endDate)
+        .gte('end_date', startDate);
+
+    if (excludeRut) {
+        query = query.neq('rut', excludeRut);
+    }
+
+    const { data: conflictingVacations, error: conflictError } = await query;
+    if (conflictError) throw conflictError;
+
+    // Get total staff count for this position
+    const totalStaffCount = await getStaffCountByPosition(cargo, terminalCode, turno);
+
+    // Count unique workers on vacation (including this new request = +1)
+    const uniqueWorkersOnVacation = new Set(conflictingVacations?.map(v => v.rut) || []).size;
+    const availableStaffCount = totalStaffCount - uniqueWorkersOnVacation - 1; // -1 for the new request
+
+    // Calculate max overlapping days
+    let overlappingDays = 0;
+    if (conflictingVacations && conflictingVacations.length > 0) {
+        const reqStart = new Date(startDate);
+        const reqEnd = new Date(endDate);
+
+        for (const v of conflictingVacations) {
+            const vStart = new Date(v.start_date);
+            const vEnd = new Date(v.end_date);
+            const overlapStart = new Date(Math.max(reqStart.getTime(), vStart.getTime()));
+            const overlapEnd = new Date(Math.min(reqEnd.getTime(), vEnd.getTime()));
+            const days = Math.ceil((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+            if (days > overlappingDays) overlappingDays = days;
+        }
+    }
+
+    return {
+        hasConflict: (conflictingVacations?.length ?? 0) > 0,
+        conflictingVacations: (conflictingVacations || []).map(v => ({
+            nombre: v.nombre,
+            cargo: v.cargo,
+            turno: v.turno,
+            start_date: v.start_date,
+            end_date: v.end_date,
+        })),
+        totalStaffCount,
+        availableStaffCount: Math.max(0, availableStaffCount),
+        overlappingDays,
+    };
+};
+
+export const fetchVacaciones = async (
+    terminalContext: TerminalContext,
+    filters?: AttendanceFilters
+): Promise<Vacacion[]> => {
+    if (!isSupabaseConfigured()) return [];
+
+    const terminals = resolveTerminalsForContext(terminalContext);
+
+    let query = supabase
+        .from('attendance_vacaciones')
+        .select('*')
+        .in('terminal_code', terminals)
+        .order('start_date', { ascending: false });
+
+    if (filters?.auth_status && filters.auth_status !== 'todos') {
+        query = query.eq('auth_status', filters.auth_status);
+    }
+
+    if (filters?.search) {
+        const term = `%${filters.search}%`;
+        query = query.or(`nombre.ilike.${term},rut.ilike.${term}`);
+    }
+
+    if (filters?.date_from) {
+        query = query.gte('start_date', filters.date_from);
+    }
+
+    if (filters?.date_to) {
+        query = query.lte('end_date', filters.date_to);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+};
+
+export const createVacacion = async (
+    values: VacacionFormValues,
+    createdBy: string
+): Promise<Vacacion> => {
+    const calendarDays = calculateCalendarDays(values.start_date, values.end_date);
+    const businessDays = calculateBusinessDays(values.start_date, values.end_date);
+
+    // Check for conflicts
+    const conflictInfo = await checkVacationConflicts(
+        values.cargo,
+        values.terminal_code,
+        values.turno,
+        values.start_date,
+        values.end_date
+    );
+
+    const conflictDetails = conflictInfo.hasConflict
+        ? `${conflictInfo.conflictingVacations.length} persona(s) en misma posición en vacaciones. Disponibles: ${conflictInfo.availableStaffCount}/${conflictInfo.totalStaffCount}`
+        : null;
+
+    const { data, error } = await supabase
+        .from('attendance_vacaciones')
+        .insert({
+            rut: values.rut,
+            nombre: values.nombre,
+            cargo: values.cargo,
+            terminal_code: values.terminal_code,
+            turno: values.turno,
+            start_date: values.start_date,
+            end_date: values.end_date,
+            return_date: values.return_date,
+            calendar_days: calendarDays,
+            business_days: businessDays,
+            has_conflict: conflictInfo.hasConflict,
+            conflict_authorized: values.conflict_authorized,
+            conflict_details: conflictDetails,
+            created_by_supervisor: normalizeName(createdBy),
+        })
+        .select()
+        .single();
+
+    if (error) {
+        showErrorToast('Error al crear registro', 'No se pudo guardar la solicitud de vacaciones');
+        throw error;
+    }
+
+    // Send email notification
+    try {
+        const conflictWarning = conflictInfo.hasConflict
+            ? `<strong style="color: #dc2626;">ADVERTENCIA:</strong> ${conflictDetails}`
+            : 'Sin conflictos detectados';
+
+        await sendRecordCreatedEmail('Vacaciones', {
+            rut: values.rut,
+            nombre: values.nombre,
+            terminal: values.terminal_code,
+            date: values.start_date,
+            createdBy: createdBy,
+            details: {
+                'Fecha Inicio': values.start_date,
+                'Fecha Término': values.end_date,
+                'Fecha Vuelta': values.return_date,
+                'Días Calendario': calendarDays.toString(),
+                'Días a Descontar': businessDays.toString(),
+                'Conflictos': conflictWarning,
+            }
+        });
+        showSuccessToast(
+            'Solicitud de vacaciones creada',
+            `Vacaciones para ${values.nombre} (${businessDays} días hábiles) registradas`,
+            createdBy
+        );
+    } catch {
+        showSuccessToast(
+            'Solicitud creada',
+            `Vacaciones para ${values.nombre} registradas (correo no enviado)`,
+            createdBy
+        );
+    }
+
+    return data;
+};
+
+export const updateVacacion = async (
+    id: string,
+    values: Partial<VacacionFormValues>
+): Promise<Vacacion> => {
+    const updateData: Record<string, unknown> = { ...values };
+
+    // Recalculate days if dates changed
+    if (values.start_date && values.end_date) {
+        updateData.calendar_days = calculateCalendarDays(values.start_date, values.end_date);
+        updateData.business_days = calculateBusinessDays(values.start_date, values.end_date);
+    }
+
+    const { data, error } = await supabase
+        .from('attendance_vacaciones')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
 };
 
 // ==========================================
