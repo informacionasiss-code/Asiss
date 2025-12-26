@@ -13,6 +13,7 @@ import { formatRut } from '../../personal/utils/rutUtils';
 import { isAuthorizer } from '../utils/authorizers';
 import { AttendanceKPIs } from '../components/AttendanceKPIs';
 import { AuthorizeRejectModal } from '../components/AuthorizeRejectModal';
+import { VacacionesCalendar } from '../components/VacacionesCalendar';
 import { VacacionesForm } from '../forms/VacacionesForm';
 import { useVacaciones, useAttendanceKPIs, useCreateVacacion, useUpdateVacacion, useAuthorize, useReject, useAttendanceRealtime } from '../hooks';
 import { AttendanceFilters, AUTH_STATUS_OPTIONS, Vacacion, VacacionFormValues } from '../types';
@@ -33,6 +34,7 @@ export const VacacionesPage = () => {
 
     const [filters, setFilters] = useState<AttendanceFilters>({ auth_status: 'todos' });
     const [modal, setModal] = useState<ModalState>({ type: 'none' });
+    const [showCalendar, setShowCalendar] = useState(false);
 
     const query = useVacaciones(terminalContext, filters);
     const kpis = useAttendanceKPIs('vacaciones', terminalContext);
@@ -119,8 +121,11 @@ export const VacacionesPage = () => {
                 description="Gestión inteligente de vacaciones con detección de conflictos"
                 actions={
                     <div className="flex gap-2">
+                        <button className="btn btn-secondary" onClick={() => setShowCalendar(true)}>
+                            <Icon name="calendar" size={18} /> Calendario
+                        </button>
                         <button className="btn btn-primary" onClick={() => setModal({ type: 'create' })}>
-                            <Icon name="calendar" size={18} /> Nueva Solicitud
+                            <Icon name="plus" size={18} /> Nueva Solicitud
                         </button>
                         <ExportMenu
                             onExportView={() => exportToXlsx({ filename: 'vacaciones', sheetName: 'Datos', rows: query.data || [], columns: exportColumns })}
@@ -260,6 +265,12 @@ export const VacacionesPage = () => {
                 <AuthorizeRejectModal mode="reject" itemName={modal.record.nombre}
                     onConfirm={handleReject} onCancel={() => setModal({ type: 'none' })} isLoading={rejectMutation.isPending} />
             )}
+
+            <VacacionesCalendar
+                isOpen={showCalendar}
+                onClose={() => setShowCalendar(false)}
+                vacaciones={query.data || []}
+            />
         </div>
     );
 };
