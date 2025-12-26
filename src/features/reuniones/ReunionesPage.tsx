@@ -1,104 +1,77 @@
-import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { PageHeader } from '../../shared/components/common/PageHeader';
-import { FiltersBar } from '../../shared/components/common/FiltersBar';
-import { DataTable, TableColumn } from '../../shared/components/common/DataTable';
-import { EmptyState } from '../../shared/components/common/EmptyState';
-import { LoadingState } from '../../shared/components/common/LoadingState';
-import { ErrorState } from '../../shared/components/common/ErrorState';
-import { ExportMenu } from '../../shared/components/common/ExportMenu';
-import { useTerminalStore } from '../../shared/state/terminalStore';
-import { reunionesAdapter } from './service';
-import { ReunionFilters, ReunionViewModel } from './types';
-import { exportToXlsx } from '../../shared/utils/exportToXlsx';
-import { formatDate } from '../../shared/utils/dates';
-import { displayTerminal } from '../../shared/utils/terminal';
+import { useState } from 'react';
+import { Icon, IconName } from '../../shared/components/common/Icon';
+import { MeetingsTableView } from './subpages/MeetingsTableView';
+import { AgendaView } from './subpages/AgendaView';
+import { MinutesView } from './subpages/MinutesView';
+import { SettingsView } from './subpages/SettingsView';
+import { MeetingWorkspace } from './workspace/MeetingWorkspace';
+
+type Tab = 'agenda' | 'reuniones' | 'minutas' | 'config';
+
+const TABS: { id: Tab; label: string; icon: IconName }[] = [
+  { id: 'agenda', label: 'Agenda', icon: 'calendar' },
+  { id: 'reuniones', label: 'Reuniones', icon: 'users' },
+  { id: 'minutas', label: 'Minutas', icon: 'file-text' },
+  { id: 'config', label: 'Configuración', icon: 'settings' },
+];
 
 export const ReunionesPage = () => {
-  const terminalContext = useTerminalStore((state) => state.context);
-  const setTerminalContext = useTerminalStore((state) => state.setContext);
-  const [filters, setFilters] = useState<ReunionFilters>({ estado: 'todas' });
+  const [activeTab, setActiveTab] = useState<Tab>('reuniones');
+  const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
 
-  const query = useQuery({
-    queryKey: ['reuniones', terminalContext, filters],
-    queryFn: () => reunionesAdapter.list({ terminalContext, filters, scope: 'view' }),
-  });
-
-  const columns: TableColumn<ReunionViewModel>[] = useMemo(
-    () => [
-      { key: 'tema', header: 'Tema' },
-      {
-        key: 'fecha',
-        header: 'Fecha',
-        render: (row) => formatDate(row.fecha),
-        value: (row) => formatDate(row.fecha),
-      },
-      { key: 'responsable', header: 'Responsable' },
-      { key: 'participantes', header: 'Asistentes' },
-      {
-        key: 'estado',
-        header: 'Estado',
-        render: (row) => <span className="badge capitalize">{row.estado}</span>,
-        value: (row) => row.estado,
-      },
-      {
-        key: 'terminal',
-        header: 'Terminal',
-        render: (row) => displayTerminal(row.terminal),
-        value: (row) => displayTerminal(row.terminal),
-      },
-    ],
-    [],
-  );
-
-  const exportColumns = columns.map((col) => ({ key: col.key, header: col.header, value: (row: ReunionViewModel) => (col.value ? col.value(row) : (row as unknown as Record<string, unknown>)[col.key]) }));
-
-  const handleExportView = () => {
-    if (!query.data) return;
-    exportToXlsx({ filename: 'reuniones_vista', sheetName: 'Reuniones', rows: query.data, columns: exportColumns });
+  const handleOpenWorkspace = (meetingId: string) => {
+    setSelectedMeetingId(meetingId);
   };
 
-  const handleExportAll = async () => {
-    const rows = await reunionesAdapter.list({ terminalContext, scope: 'all' });
-    exportToXlsx({ filename: 'reuniones_completo', sheetName: 'Reuniones', rows, columns: exportColumns });
+  const handleCloseWorkspace = () => {
+    setSelectedMeetingId(null);
+  };
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'agenda':
+        return <AgendaView onOpenMeeting={handleOpenWorkspace} />;
+      case 'reuniones':
+        return <MeetingsTableView onOpenMeeting={handleOpenWorkspace} />;
+      case 'minutas':
+        return <MinutesView onOpenMeeting={handleOpenWorkspace} />;
+      case 'config':
+        return <SettingsView />;
+      default:
+        return null;
+    }
   };
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Reuniones"
-        description="Agenda y seguimiento de reuniones."
-        actions={
-          <div className="flex gap-2">
-            <button className="btn btn-primary">Nueva reunión</button>
-            <ExportMenu onExportView={handleExportView} onExportAll={handleExportAll} />
-          </div>
-        }
-      />
-
-      <FiltersBar terminalContext={terminalContext} onTerminalChange={setTerminalContext}>
-        <div className="flex flex-col gap-1">
-          <label className="label">Estado</label>
-          <select
-            className="input"
-            value={filters.estado}
-            onChange={(e) => setFilters({ estado: e.target.value as ReunionFilters['estado'] })}
-          >
-            <option value="todas">Todas</option>
-            <option value="agendada">Agendada</option>
-            <option value="en_curso">En curso</option>
-            <option value="cerrada">Cerrada</option>
-          </select>
+    <div className="space-y-6">
+      {/* Tabs Navigation */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 border-b border-slate-200 pb-4">
+        <div className="flex flex-wrap gap-2">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${activeTab === tab.id
+                  ? 'bg-brand-600 text-white shadow-md'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+            >
+              <Icon name={tab.icon} size={18} />
+              <span className="hidden sm:inline">{tab.label}</span>
+            </button>
+          ))}
         </div>
-      </FiltersBar>
+      </div>
 
-      {query.isLoading && <LoadingState />}
-      {query.isError && <ErrorState onRetry={query.refetch} />}
-      {!query.isLoading && !query.isError && (
-        <>
-          {!query.data?.length && <EmptyState description="No hay reuniones con estos filtros." />}
-          {query.data && query.data.length > 0 && <DataTable columns={columns} rows={query.data} />}
-        </>
+      {/* Tab Content */}
+      {renderContent()}
+
+      {/* Meeting Workspace Modal */}
+      {selectedMeetingId && (
+        <MeetingWorkspace
+          meetingId={selectedMeetingId}
+          onClose={handleCloseWorkspace}
+        />
       )}
     </div>
   );

@@ -625,3 +625,156 @@ ALTER PUBLICATION supabase_realtime ADD TABLE attendance_vacaciones;
 ALTER TABLE attendance_vacaciones ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all for vacaciones" ON attendance_vacaciones FOR ALL USING (true) WITH CHECK (true);
 
+-- =============================================
+-- SECTION: REUNIONES
+-- =============================================
+
+-- Status enum for meetings
+CREATE TYPE meeting_status AS ENUM ('PROGRAMADA', 'REALIZADA', 'CANCELADA');
+CREATE TYPE notification_status AS ENUM ('PENDIENTE', 'ENVIADO', 'ERROR');
+CREATE TYPE action_status AS ENUM ('PENDIENTE', 'CUMPLIDO', 'VENCIDO');
+
+-- Main meetings table
+CREATE TABLE meetings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  terminal_code TEXT NOT NULL,
+  starts_at TIMESTAMPTZ NOT NULL,
+  duration_minutes INT NOT NULL DEFAULT 30,
+  location TEXT,
+  meeting_link TEXT,
+  status meeting_status NOT NULL DEFAULT 'PROGRAMADA',
+  cancel_reason TEXT,
+  agenda_json JSONB DEFAULT '[]'::jsonb,
+  minutes_text TEXT,
+  created_by_supervisor TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Meeting invitees
+CREATE TABLE meeting_invitees (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  meeting_id UUID NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+  staff_id UUID REFERENCES staff(id) ON DELETE SET NULL,
+  invitee_name TEXT NOT NULL,
+  invitee_email TEXT,
+  notification_status notification_status NOT NULL DEFAULT 'PENDIENTE',
+  notified_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Meeting files/attachments
+CREATE TABLE meeting_files (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  meeting_id UUID NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+  storage_path TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  mime_type TEXT NOT NULL,
+  size_bytes INT NOT NULL,
+  uploaded_by TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Meeting actions/agreements
+CREATE TABLE meeting_actions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  meeting_id UUID NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+  description TEXT NOT NULL,
+  responsible_staff_id UUID REFERENCES staff(id) ON DELETE SET NULL,
+  responsible_name TEXT,
+  due_date DATE,
+  status action_status NOT NULL DEFAULT 'PENDIENTE',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Meeting email settings
+CREATE TABLE meeting_email_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  scope_type TEXT NOT NULL CHECK (scope_type IN ('GLOBAL', 'TERMINAL')),
+  scope_code TEXT NOT NULL,
+  enabled BOOLEAN DEFAULT true,
+  cc_emails TEXT,
+  subject_template TEXT NOT NULL DEFAULT 'Invitación a Reunión: {{title}}',
+  body_template TEXT NOT NULL DEFAULT 'Estimado/a {{invitee_name}},\n\nLe invitamos a la reunión "{{title}}" programada para el {{date}} a las {{time}}.\n\nLugar: {{location}}\n\nSaludos cordiales.',
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(scope_type, scope_code)
+);
+
+-- Indexes for meetings
+CREATE INDEX idx_meetings_terminal_starts ON meetings(terminal_code, starts_at DESC);
+CREATE INDEX idx_meetings_status ON meetings(status);
+CREATE INDEX idx_meetings_starts_at ON meetings(starts_at);
+
+-- Indexes for invitees
+CREATE INDEX idx_invitees_meeting ON meeting_invitees(meeting_id);
+CREATE INDEX idx_invitees_staff ON meeting_invitees(staff_id);
+
+-- Indexes for files
+CREATE INDEX idx_files_meeting ON meeting_files(meeting_id);
+
+-- Indexes for actions
+CREATE INDEX idx_actions_meeting ON meeting_actions(meeting_id);
+CREATE INDEX idx_actions_responsible ON meeting_actions(responsible_staff_id);
+CREATE INDEX idx_actions_status ON meeting_actions(status);
+
+-- Triggers for updated_at
+CREATE TRIGGER update_meetings_updated_at
+  BEFORE UPDATE ON meetings
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_actions_updated_at
+  BEFORE UPDATE ON meeting_actions
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_email_settings_updated_at
+  BEFORE UPDATE ON meeting_email_settings
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Enable Realtime
+ALTER PUBLICATION supabase_realtime ADD TABLE meetings;
+ALTER PUBLICATION supabase_realtime ADD TABLE meeting_invitees;
+ALTER PUBLICATION supabase_realtime ADD TABLE meeting_actions;
+
+-- RLS (permissive for development)
+ALTER TABLE meetings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meeting_invitees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meeting_files ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meeting_actions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meeting_email_settings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all for meetings" ON meetings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for meeting_invitees" ON meeting_invitees FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for meeting_files" ON meeting_files FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for meeting_actions" ON meeting_actions FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for meeting_email_settings" ON meeting_email_settings FOR ALL USING (true) WITH CHECK (true);
+
+-- Insert default global email settings
+INSERT INTO meeting_email_settings (scope_type, scope_code, enabled, subject_template, body_template)
+VALUES ('GLOBAL', 'ALL', true, 
+  'Invitación a Reunión: {{title}}',
+  'Estimado/a {{invitee_name}},
+
+Le invitamos a participar en la reunión:
+
+Título: {{title}}
+Fecha: {{date}}
+Hora: {{time}}
+Duración: {{duration}} minutos
+Lugar: {{location}}
+
+Agenda:
+{{agenda}}
+
+Saludos cordiales,
+{{organizer}}')
+ON CONFLICT (scope_type, scope_code) DO NOTHING;
+
+-- Storage bucket for meeting files (run this in SQL Editor)
+-- INSERT INTO storage.buckets (id, name, public) VALUES ('meeting-files', 'meeting-files', true)
+-- ON CONFLICT (id) DO NOTHING;
+
