@@ -778,3 +778,152 @@ ON CONFLICT (scope_type, scope_code) DO NOTHING;
 -- INSERT INTO storage.buckets (id, name, public) VALUES ('meeting-files', 'meeting-files', true)
 -- ON CONFLICT (id) DO NOTHING;
 
+-- =============================================
+-- SECTION: TAREAS
+-- =============================================
+
+-- Status enum for tasks
+CREATE TYPE task_status_enum AS ENUM ('PENDIENTE', 'EN_CURSO', 'TERMINADO', 'EVALUADO', 'RECHAZADO');
+
+-- Priority enum for tasks
+CREATE TYPE task_priority_enum AS ENUM ('BAJA', 'MEDIA', 'ALTA', 'CRITICA');
+
+-- Main tasks table
+CREATE TABLE tasks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  description TEXT,
+  terminal_code TEXT NOT NULL,
+  priority task_priority_enum NOT NULL DEFAULT 'MEDIA',
+  status task_status_enum NOT NULL DEFAULT 'PENDIENTE',
+  assigned_to_staff_id UUID REFERENCES staff(id) ON DELETE SET NULL,
+  assigned_to_name TEXT NOT NULL,
+  assigned_to_email TEXT,
+  created_by_supervisor TEXT NOT NULL,
+  due_at TIMESTAMPTZ,
+  period_start DATE,
+  period_end DATE,
+  evaluated_by TEXT,
+  evaluated_at TIMESTAMPTZ,
+  evaluation_note TEXT,
+  rejected_reason TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  CONSTRAINT valid_period CHECK (period_end IS NULL OR period_start IS NULL OR period_end >= period_start)
+);
+
+-- Task comments/updates
+CREATE TABLE task_comments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  author_name TEXT NOT NULL,
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Task attachments (files and URLs)
+CREATE TABLE task_attachments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('FILE', 'URL')),
+  storage_path TEXT,
+  url TEXT,
+  file_name TEXT,
+  mime_type TEXT,
+  size_bytes INT,
+  created_by TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Task email settings
+CREATE TABLE task_email_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  scope_type TEXT NOT NULL CHECK (scope_type IN ('GLOBAL', 'TERMINAL')),
+  scope_code TEXT NOT NULL,
+  enabled BOOLEAN DEFAULT true,
+  cc_emails TEXT,
+  subject_templates JSONB NOT NULL DEFAULT '{
+    "assigned": "Nueva tarea asignada: {{title}}",
+    "status_change": "Tarea actualizada: {{title}}",
+    "overdue": "Tarea vencida: {{title}}",
+    "evaluated_ok": "Tarea evaluada: {{title}}",
+    "evaluated_reject": "Tarea rechazada: {{title}}"
+  }'::jsonb,
+  body_templates JSONB NOT NULL DEFAULT '{
+    "assigned": "Estimado/a {{assigned_name}},\n\nSe le ha asignado la tarea: {{title}}\n\nDescripción: {{description}}\nVencimiento: {{due_date}}\nPrioridad: {{priority}}\n\nSaludos cordiales,\n{{creator}}",
+    "status_change": "La tarea \"{{title}}\" ha cambiado a estado: {{status}}",
+    "overdue": "La tarea \"{{title}}\" ha vencido y requiere atención.",
+    "evaluated_ok": "La tarea \"{{title}}\" ha sido evaluada y aceptada.",
+    "evaluated_reject": "La tarea \"{{title}}\" ha sido rechazada.\n\nMotivo: {{reason}}"
+  }'::jsonb,
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(scope_type, scope_code)
+);
+
+-- Indexes for tasks
+CREATE INDEX idx_tasks_terminal_status ON tasks(terminal_code, status, updated_at DESC);
+CREATE INDEX idx_tasks_due_at ON tasks(due_at);
+CREATE INDEX idx_tasks_assigned ON tasks(assigned_to_staff_id);
+CREATE INDEX idx_tasks_status ON tasks(status);
+CREATE INDEX idx_tasks_created_by ON tasks(created_by_supervisor);
+
+-- Indexes for comments
+CREATE INDEX idx_task_comments_task ON task_comments(task_id, created_at DESC);
+
+-- Indexes for attachments
+CREATE INDEX idx_task_attachments_task ON task_attachments(task_id, created_at DESC);
+
+-- Trigger for updated_at
+CREATE TRIGGER update_tasks_updated_at
+  BEFORE UPDATE ON tasks
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_task_email_settings_updated_at
+  BEFORE UPDATE ON task_email_settings
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Enable Realtime (idempotent)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'tasks'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE tasks;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'task_comments'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE task_comments;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'task_attachments'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE task_attachments;
+  END IF;
+END $$;
+
+-- RLS (permissive for development)
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE task_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE task_attachments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE task_email_settings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all for tasks" ON tasks FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for task_comments" ON task_comments FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for task_attachments" ON task_attachments FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for task_email_settings" ON task_email_settings FOR ALL USING (true) WITH CHECK (true);
+
+-- Insert default global email settings
+INSERT INTO task_email_settings (scope_type, scope_code, enabled)
+VALUES ('GLOBAL', 'ALL', true)
+ON CONFLICT (scope_type, scope_code) DO NOTHING;
+
+-- Storage bucket for task files (run this in SQL Editor)
+-- INSERT INTO storage.buckets (id, name, public) VALUES ('task-files', 'task-files', true)
+-- ON CONFLICT (id) DO NOTHING;
+
