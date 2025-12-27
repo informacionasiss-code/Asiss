@@ -141,7 +141,62 @@ export const RequestDetailModal = ({ isOpen, onClose, requestId }: Props) => {
                         </div>
                     </div>
 
-                    {/* Technician Panel */}
+                    {/* Technician Info Display (Read-Only) */}
+                    {(request.status === 'REPARADA' || request.status === 'NO_REPARADA' || request.status === 'REAGENDADA' || request.status === 'CERRADA') && request.technician_name && (
+                        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-6 border-2 border-slate-200">
+                            <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                                <Icon name="wrench" size={20} className="text-slate-700" />
+                                Información del Técnico
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="bg-white rounded-lg p-4 border border-slate-200">
+                                    <p className="text-xs font-bold text-slate-500 uppercase mb-1">Técnico Asignado</p>
+                                    <p className="text-sm font-semibold text-slate-900">{request.technician_name}</p>
+                                </div>
+                                {request.technician_visit_at && (
+                                    <div className="bg-white rounded-lg p-4 border border-slate-200">
+                                        <p className="text-xs font-bold text-slate-500 uppercase mb-1">Fecha de Visita</p>
+                                        <p className="text-sm font-semibold text-slate-900">
+                                            {new Date(request.technician_visit_at).toLocaleString('es-CL', {
+                                                dateStyle: 'short',
+                                                timeStyle: 'short'
+                                            })}
+                                        </p>
+                                    </div>
+                                )}
+                                {request.result && (
+                                    <div className="bg-white rounded-lg p-4 border border-slate-200">
+                                        <p className="text-xs font-bold text-slate-500 uppercase mb-1">Resultado</p>
+                                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${request.result === 'OPERATIVO'
+                                                ? 'bg-emerald-100 text-emerald-700'
+                                                : 'bg-red-100 text-red-700'
+                                            }`}>
+                                            {request.result}
+                                        </span>
+                                    </div>
+                                )}
+                                {request.closed_at && (
+                                    <div className="bg-white rounded-lg p-4 border border-slate-200">
+                                        <p className="text-xs font-bold text-slate-500 uppercase mb-1">Fecha de Cierre</p>
+                                        <p className="text-sm font-semibold text-slate-900">
+                                            {new Date(request.closed_at).toLocaleString('es-CL', {
+                                                dateStyle: 'short',
+                                                timeStyle: 'short'
+                                            })}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                            {request.technician_message && (
+                                <div className="mt-4 bg-white rounded-lg p-4 border border-slate-200">
+                                    <p className="text-xs font-bold text-slate-500 uppercase mb-2">Observaciones del Técnico</p>
+                                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{request.technician_message}</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Technician Panel (Editable) */}
                     {(request.status === 'EN_REVISION' || request.status === 'CREADA' || request.status === 'PROGRAMADA') && (
                         <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-6 border border-slate-200">
                             <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
