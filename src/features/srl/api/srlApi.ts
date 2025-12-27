@@ -146,7 +146,7 @@ export async function updateSrlEmailSettings(settings: Partial<SrlEmailSetting>)
     const { error } = await supabase
         .from('srl_email_settings')
         .update(settings)
-        .gt('created_at', '2000-01-01'); // Dummy condition to update all
+        .gt('updated_at', '2000-01-01'); // Dummy condition to update all
 
     if (error) throw error;
     return true;
