@@ -59,6 +59,7 @@ export interface ParsedCommand {
     rawText: string;
     confidence: number;            // 0-1, how confident the parser is
     errors: string[];
+    isValid: boolean;
 }
 
 export interface ResolvedPerson {

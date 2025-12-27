@@ -11,6 +11,10 @@ import {
     executeVacation,
     executeLicense,
     executePermission,
+    executeAuthorization,
+    executeDayChange,
+    executeNoMark,
+    executeNoCredential,
 } from './api/asisCommandApi';
 import { CommandLogInsert, ParsedCommand, ResolvedPerson, CommandPreview, INTENT_TABLES, INTENT_LABELS } from './types';
 import { parseCommand, validateCommand } from './parser/parseCommand';
@@ -117,6 +121,66 @@ export const useExecuteCommand = () => {
                         parsed.endDate!,
                         'PERSONAL',
                         parsed.reason || 'Registrado via Asis Command',
+                        executedBy
+                    );
+                    break;
+
+                case 'AUTORIZACION_LLEGADA':
+                    result = await executeAuthorization(
+                        person.id,
+                        person,
+                        parsed.startDate!, // Date of incident
+                        'LLEGADA',
+                        parsed.startTime || '00:00',
+                        parsed.reason || 'Llegada Tarde',
+                        executedBy
+                    );
+                    break;
+
+                case 'AUTORIZACION_SALIDA':
+                    result = await executeAuthorization(
+                        person.id,
+                        person,
+                        parsed.startDate!,
+                        'SALIDA',
+                        parsed.startTime || '00:00',
+                        parsed.reason || 'Salida Anticipada',
+                        executedBy
+                    );
+                    break;
+
+                case 'CAMBIO_DIA':
+                    // Need two dates preferably. If only one, assumption is implicit
+                    // If parser found "el viernes por el sábado", we might have:
+                    // startDate=Friday, endDate=Saturday? Or parser needs enhancement to separate dayOff/dayOn
+                    // For now, assume startDate is the "change" date
+                    // If startDate != endDate, use them as the pair
+                    const dayOff = parsed.startDate!;
+                    const dayOn = (parsed.endDate && parsed.endDate !== parsed.startDate) ? parsed.endDate : parsed.startDate!;
+
+                    result = await executeDayChange(
+                        person,
+                        dayOff,
+                        dayOn,
+                        parsed.reason || 'Cambio solicitado',
+                        executedBy
+                    );
+                    break;
+
+                case 'NO_MARCACION':
+                    result = await executeNoMark(
+                        person,
+                        parsed.startDate!,
+                        parsed.reason || 'No marcó asistencia',
+                        executedBy
+                    );
+                    break;
+
+                case 'SIN_CREDENCIAL':
+                    result = await executeNoCredential(
+                        person,
+                        parsed.startDate!,
+                        parsed.reason || 'Sin credencial física',
                         executedBy
                     );
                     break;

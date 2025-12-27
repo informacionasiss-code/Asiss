@@ -95,6 +95,7 @@ export function parseCommand(text: string): ParsedCommand {
         rawText: text,
         confidence,
         errors,
+        isValid: errors.length === 0,
     };
 }
 

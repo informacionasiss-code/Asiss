@@ -88,12 +88,23 @@ export function extractDate(text: string): string | null {
         return formatDate(addDays(today, 2));
     }
 
-    // Day names: "lunes", "el lunes", "este lunes", "próximo lunes"
+    // Relative days: "el próximo lunes", "este viernes"
+    // "próximo X" = next occurrence of X (if today is Mon and user says "next Mon", it's +7 days)
     for (const [dayName, dayNum] of Object.entries(DAY_MAP)) {
-        const pattern = new RegExp(`\\b(el\\s+|este\\s+|pr[oó]ximo\\s+)?${dayName}\\b`, 'i');
-        if (pattern.test(lower)) {
-            const nextDay = getNextWeekday(today, dayNum);
-            return formatDate(nextDay);
+        // Match "próximo lunes"
+        if (new RegExp(`\\bpr[oó]ximo\\s+${dayName}\\b`, 'i').test(lower)) {
+            let date = getNextWeekday(today, dayNum);
+            // If next weekday is essentially today or very close, "próximo" usually means next week's instance
+            if ((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24) < 1) {
+                date = addDays(date, 7);
+            }
+            return formatDate(date);
+        }
+
+        // Match "este lunes", "el lunes"
+        if (new RegExp(`\\b(el|este)\\s+${dayName}\\b`, 'i').test(lower) || new RegExp(`\\b${dayName}\\b`).test(lower)) {
+            // "el lunes" usually means the immediate next one (or today)
+            return formatDate(getNextWeekday(today, dayNum));
         }
     }
 
@@ -113,9 +124,12 @@ export function extractDate(text: string): string | null {
         if (month !== undefined) {
             let year = spanishMatch[3] ? parseInt(spanishMatch[3], 10) : today.getFullYear();
 
-            // If date already passed this year, use next year
+            // If date already passed this year (and year wasn't specified), use next year
+            // Exception: if it's currently Dec and we talk about Jan, it's clearly next year
             const candidate = new Date(year, month, day);
             if (!spanishMatch[3] && candidate < today) {
+                // Heuristic: if requests is > 6 months in past, assume next year. 
+                // If it's 1 week ago, maybe they mean past? For now assume future commands.
                 year += 1;
             }
 

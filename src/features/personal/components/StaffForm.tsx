@@ -14,6 +14,7 @@ interface Props {
 
 const TURNO_OPTIONS = ['Mañana', 'Tarde', 'Noche', 'Rotativo'];
 const TALLA_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+const TALLA_PANTALON_OPTIONS = ['36', '38', '40', '42', '44', '46', '48', '50', '52', '54', '56', '58', '60'];
 const TALLA_ZAPATO_OPTIONS = ['35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46'];
 
 const validateEmail = (email: string): boolean => {
@@ -302,7 +303,7 @@ export const StaffForm = ({ initialData, onSubmit, onCancel, isLoading }: Props)
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {renderTallaSelect('Talla Polera', 'talla_polera', TALLA_OPTIONS)}
                             {renderTallaSelect('Talla Chaqueta', 'talla_chaqueta', TALLA_OPTIONS)}
-                            {renderTallaSelect('Talla Pantalón', 'talla_pantalon', TALLA_OPTIONS)}
+                            {renderTallaSelect('Talla Pantalón', 'talla_pantalon', TALLA_PANTALON_OPTIONS)}
                             {renderTallaSelect('Talla Zapato de Seguridad', 'talla_zapato_seguridad', TALLA_ZAPATO_OPTIONS)}
                             {renderTallaSelect('Talla Chaleco Reflectante', 'talla_chaleco_reflectante', TALLA_OPTIONS)}
                         </div>

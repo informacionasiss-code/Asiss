@@ -254,3 +254,149 @@ export async function executePermission(
 
     return { success: true };
 }
+
+/**
+ * Execute authorization (Llegada/Salida)
+ */
+export async function executeAuthorization(
+    staffId: string,
+    person: ResolvedPerson,
+    date: string,
+    type: 'LLEGADA' | 'SALIDA',
+    time: string, // HH:mm
+    reason: string,
+    createdBy: string
+): Promise<{ success: boolean; error?: string }> {
+    if (!isSupabaseConfigured()) return { success: false, error: 'Supabase no configurado' };
+
+    // Determine authorization type for DB enum
+    const entryOrExit = type === 'LLEGADA' ? 'ENTRADA' : 'SALIDA';
+
+    const { error } = await supabase
+        .from('attendance_autorizaciones')
+        .insert({
+            rut: person.rut,
+            nombre: person.nombre,
+            cargo: person.cargo,
+            terminal_code: person.terminal_code,
+            turno: person.horario.split(' ')[0] || 'DIA', // Simple inference
+            horario: person.horario,
+            authorization_date: date,
+            entry_or_exit: entryOrExit,
+            motivo: reason, // In this table reason is "motivo"
+            created_by_supervisor: createdBy,
+            auth_status: 'AUTORIZADO', // Auto-authorized by supervisor
+            authorized_by: createdBy,
+            authorized_at: new Date().toISOString(),
+        });
+
+    if (error) {
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
+
+/**
+ * Execute Day Change
+ */
+export async function executeDayChange(
+    person: ResolvedPerson,
+    originalDate: string,
+    newDate: string, // Logic: original is day OFF, new is day ON (or vice versa depending on context)
+    reason: string,
+    createdBy: string
+): Promise<{ success: boolean; error?: string }> {
+    if (!isSupabaseConfigured()) return { success: false, error: 'Supabase no configurado' };
+
+    // Note: Day Change logic is complex. We assume simplest case:
+    // User wants to work on 'newDate' instead of 'originalDate'
+    // So originalDate is the day they were supposed to work but won't (Day Off)
+    // And newDate is the day they will work (Day On)
+
+    // Since parsing usually gives 2 dates, we'll map them:
+    // Date 1 -> Day Off (Origin)
+    // Date 2 -> Day On (Destination)
+
+    const { error } = await supabase
+        .from('attendance_cambios_dia')
+        .insert({
+            rut: person.rut,
+            nombre: person.nombre,
+            terminal_code: person.terminal_code,
+            date: new Date().toISOString().split('T')[0], // Request date
+            day_off_date: originalDate,
+            day_on_date: newDate,
+            document_path: reason ? `Motivo: ${reason}` : null,
+            created_by_supervisor: createdBy,
+            auth_status: 'PENDIENTE',
+        });
+
+    if (error) {
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
+
+/**
+ * Execute No Mark Incident
+ */
+export async function executeNoMark(
+    person: ResolvedPerson,
+    date: string,
+    reason: string,
+    createdBy: string
+): Promise<{ success: boolean; error?: string }> {
+    if (!isSupabaseConfigured()) return { success: false, error: 'Supabase no configurado' };
+
+    const { error } = await supabase
+        .from('attendance_no_marcaciones')
+        .insert({
+            rut: person.rut,
+            nombre: person.nombre,
+            terminal_code: person.terminal_code,
+            date: date,
+            observations: reason,
+            incident_state: 'INFORMADA',
+            created_by_supervisor: createdBy,
+            auth_status: 'PENDIENTE',
+        });
+
+    if (error) {
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
+
+/**
+ * Execute No Credential Incident
+ */
+export async function executeNoCredential(
+    person: ResolvedPerson,
+    date: string,
+    reason: string,
+    createdBy: string
+): Promise<{ success: boolean; error?: string }> {
+    if (!isSupabaseConfigured()) return { success: false, error: 'Supabase no configurado' };
+
+    const { error } = await supabase
+        .from('attendance_sin_credenciales')
+        .insert({
+            rut: person.rut,
+            nombre: person.nombre,
+            terminal_code: person.terminal_code,
+            date: date,
+            observacion: reason,
+            cargo: person.cargo,
+            created_by_supervisor: createdBy,
+            auth_status: 'PENDIENTE',
+        });
+
+    if (error) {
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
