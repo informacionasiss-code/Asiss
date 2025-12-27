@@ -4,6 +4,7 @@
  */
 
 import { supabase, isSupabaseConfigured } from '../../../shared/lib/supabaseClient';
+import { emailService } from '../../../shared/services/emailService';
 import { CommandLog, CommandLogInsert, CommandEmailSetting, CommandIntent, ResolvedPerson } from '../types';
 
 // ==========================================
@@ -189,7 +190,21 @@ export async function executeVacation(
         return { success: false, error: 'Personal no encontrado' };
     }
 
-    // 2. Insert vacation record
+    // 2. Calculate days
+    const start = new Date(startDate + 'T12:00:00');
+    const end = new Date(endDate + 'T12:00:00');
+    let calendarDays = 0;
+    let businessDays = 0;
+    const current = new Date(start);
+
+    while (current <= end) {
+        calendarDays++;
+        const day = current.getDay();
+        if (day !== 0 && day !== 6) businessDays++; // Mon-Fri
+        current.setDate(current.getDate() + 1);
+    }
+
+    // 3. Insert vacation record
     const { error } = await supabase
         .from('attendance_vacaciones')
         .insert({
@@ -201,16 +216,30 @@ export async function executeVacation(
             turno: staff.turno || 'DIA',
             start_date: startDate,
             end_date: endDate,
-            return_date: endDate, // Fallback
-            calendar_days: 0, // Fallback
-            business_days: 0, // Fallback
+            return_date: endDate, // Should calculate return date, keeping simplistic for now
+            calendar_days: calendarDays,
+            business_days: businessDays,
             note,
             created_by_supervisor: createdBy,
-            auth_status: 'AUTORIZADO', // Auto-approve via command?
+            auth_status: 'AUTORIZADO',
         });
 
     if (error) {
         return { success: false, error: error.message };
+    }
+
+    // 4. Send Email Notification
+    try {
+        await emailService.sendEmail({
+            audience: 'manual',
+            manualRecipients: ['rrhh@informacionasiss.cl'], // Default HR email
+            subject: `Vacaciones Asignadas - ${staff.nombre}`,
+            body: `Se han registrado vacaciones para:\n\nNombre: ${staff.nombre}\nRUT: ${staff.rut}\nCargo: ${staff.cargo}\nTerminal: ${staff.terminal_code}\n\nDesde: ${startDate}\nHasta: ${endDate}\nDías Hábiles: ${businessDays}\nDías Corridos: ${calendarDays}\n\nNota: ${note}\n\nRegistrado por: ${createdBy}\nSistema Asis Command`,
+            module: 'asistencia',
+        });
+    } catch (emailErr) {
+        console.error('Error sending vacation email:', emailErr);
+        // Don't fail the command if email fails, but log it
     }
 
     return { success: true };
