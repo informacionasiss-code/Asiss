@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Icon } from '../../../shared/components/common/Icon';
-import { useUpdateSrlRequest } from '../hooks';
+import { useUpdateSrlRequest, useUploadBusImage } from '../hooks';
 import { SrlStatus } from '../types';
 
 interface Props {
+    isOpen: boolean;
+    onClose: () => void;
     requestId: string;
     currentStatus: SrlStatus;
     technicianName?: string;
@@ -14,6 +16,8 @@ interface Props {
 }
 
 export const TechnicianPanel = ({
+    isOpen,
+    onClose,
     requestId,
     currentStatus,
     technicianName: initialTechnicianName,
@@ -33,8 +37,14 @@ export const TechnicianPanel = ({
     const [nextVisitAt, setNextVisitAt] = useState(
         initialNextVisit ? new Date(initialNextVisit).toISOString().slice(0, 16) : ''
     );
+    const [documentFile, setDocumentFile] = useState<File | null>(null);
 
     const handleStartReview = async () => {
+        if (!technicianName.trim()) {
+            alert('Debe ingresar el nombre del técnico');
+            return;
+        }
+
         try {
             await updateMutation.mutateAsync({
                 id: requestId,
@@ -45,6 +55,7 @@ export const TechnicianPanel = ({
                 }
             });
             alert('Revisión iniciada correctamente');
+            onClose();
         } catch (error) {
             console.error(error);
             alert('Error al iniciar revisión');
@@ -71,6 +82,7 @@ export const TechnicianPanel = ({
                 }
             });
             alert(`Solicitud marcada como ${newStatus}`);
+            onClose();
         } catch (error) {
             console.error(error);
             alert('Error al completar revisión');
@@ -94,158 +106,227 @@ export const TechnicianPanel = ({
                 }
             });
             alert('Solicitud reagendada correctamente');
+            onClose();
         } catch (error) {
             console.error(error);
             alert('Error al reagendar');
         }
     };
 
+    if (!isOpen) return null;
+
     return (
-        <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-4">
-                <div className="flex items-center gap-3 text-white">
-                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur">
-                        <Icon name="wrench" size={20} />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-lg">Panel de Técnico</h3>
-                        <p className="text-xs text-white/80">Gestión de Revisión</p>
-                    </div>
-                </div>
-            </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+            {/* Backdrop */}
+            <div
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                onClick={onClose}
+            ></div>
 
-            <div className="p-6 space-y-6">
-                {/* Technician Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Modal */}
+            <div className="relative bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-300">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-slate-800 to-slate-900 px-6 py-5 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
+                            <Icon name="wrench" size={20} className="text-white" />
+                        </div>
+                        <div>
+                            <h3 className="text-white font-bold text-lg">Panel de Técnico</h3>
+                            <p className="text-slate-300 text-sm">Gestión de Revisión Técnica</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+                    >
+                        <Icon name="x" size={20} />
+                    </button>
+                </div>
+
+                {/* Content */}
+                <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)] space-y-6">
+                    {/* Technician Info */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                Nombre del Técnico
+                            </label>
+                            <div className="relative">
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                    <Icon name="user" size={18} />
+                                </div>
+                                <input
+                                    type="text"
+                                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-slate-900"
+                                    placeholder="Ingrese nombre completo"
+                                    value={technicianName}
+                                    onChange={e => setTechnicianName(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                Fecha y Hora de Visita
+                            </label>
+                            <div className="relative">
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                    <Icon name="calendar" size={18} />
+                                </div>
+                                <input
+                                    type="datetime-local"
+                                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-slate-900"
+                                    value={technicianVisitAt}
+                                    onChange={e => setTechnicianVisitAt(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Observation */}
                     <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">
-                            Nombre del Técnico
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                            Observaciones del Técnico
                         </label>
-                        <input
-                            type="text"
-                            className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 font-medium"
-                            placeholder="Juan Pérez"
-                            value={technicianName}
-                            onChange={e => setTechnicianName(e.target.value)}
+                        <textarea
+                            rows={4}
+                            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-slate-900 resize-none"
+                            placeholder="Detalle la revisión técnica, piezas reemplazadas, reparaciones realizadas..."
+                            value={technicianMessage}
+                            onChange={e => setTechnicianMessage(e.target.value)}
                         />
                     </div>
+
+                    {/* Document Upload */}
                     <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">
-                            Fecha/Hora de Visita
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                            Documento Técnico (Informe de Revisión)
                         </label>
-                        <input
-                            type="datetime-local"
-                            className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 font-medium"
-                            value={technicianVisitAt}
-                            onChange={e => setTechnicianVisitAt(e.target.value)}
-                        />
+                        <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 hover:border-blue-400 transition-colors">
+                            <input
+                                type="file"
+                                id="tech-doc-upload"
+                                className="hidden"
+                                accept="image/*,application/pdf"
+                                onChange={e => setDocumentFile(e.target.files?.[0] || null)}
+                            />
+                            <label
+                                htmlFor="tech-doc-upload"
+                                className="flex flex-col items-center cursor-pointer"
+                            >
+                                <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mb-3">
+                                    <Icon name="upload" size={24} className="text-blue-600" />
+                                </div>
+                                {documentFile ? (
+                                    <>
+                                        <p className="text-sm font-semibold text-slate-900 mb-1">{documentFile.name}</p>
+                                        <p className="text-xs text-slate-500">{(documentFile.size / 1024).toFixed(1)} KB</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="text-sm font-semibold text-slate-900 mb-1">Subir documento</p>
+                                        <p className="text-xs text-slate-500">PDF o Imagen (Max 10MB)</p>
+                                    </>
+                                )}
+                            </label>
+                        </div>
                     </div>
-                </div>
 
-                {/* Observation / Comments */}
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">
-                        Observaciones del Técnico
-                    </label>
-                    <textarea
-                        rows={4}
-                        className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 resize-none"
-                        placeholder="Detalle de la revisión, piezas reemplazadas, comentarios adicionales..."
-                        value={technicianMessage}
-                        onChange={e => setTechnicianMessage(e.target.value)}
-                    />
-                </div>
-
-                {/* Result Selection */}
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">
-                        Resultado de la Revisión
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                        <button
-                            onClick={() => setResult('OPERATIVO')}
-                            className={`
-                                p-4 rounded-xl border-2 transition-all font-bold text-sm flex items-center justify-center gap-2
-                                ${result === 'OPERATIVO'
-                                    ? 'bg-green-500 border-green-600 text-white shadow-lg scale-105'
-                                    : 'bg-white border-slate-300 text-slate-600 hover:border-green-400'
-                                }
-                            `}
-                        >
-                            <Icon name="check-circle" size={20} />
-                            OPERATIVO
-                        </button>
-                        <button
-                            onClick={() => setResult('NO_OPERATIVO')}
-                            className={`
-                                p-4 rounded-xl border-2 transition-all font-bold text-sm flex items-center justify-center gap-2
-                                ${result === 'NO_OPERATIVO'
-                                    ? 'bg-red-500 border-red-600 text-white shadow-lg scale-105'
-                                    : 'bg-white border-slate-300 text-slate-600 hover:border-red-400'
-                                }
-                            `}
-                        >
-                            <Icon name="x-circle" size={20} />
-                            NO OPERATIVO
-                        </button>
-                    </div>
-                </div>
-
-                {/* Next Visit (Optional) */}
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">
-                        Próxima Visita (Opcional)
-                    </label>
-                    <input
-                        type="datetime-local"
-                        className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 font-medium"
-                        value={nextVisitAt}
-                        onChange={e => setNextVisitAt(e.target.value)}
-                    />
-                </div>
-
-                {/* Action Buttons */}
-                <div className="space-y-3 pt-4 border-t border-slate-200">
-                    {currentStatus === 'CREADA' || currentStatus === 'ENVIADA' || currentStatus === 'PROGRAMADA' ? (
-                        <button
-                            onClick={handleStartReview}
-                            disabled={updateMutation.isPending}
-                            className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 transition-all active:scale-95"
-                        >
-                            <Icon name="check" size={20} />
-                            Iniciar Revisión
-                        </button>
-                    ) : null}
-
-                    {currentStatus === 'EN_REVISION' ? (
-                        <>
+                    {/* Result Selection */}
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-3">
+                            Resultado de la Revisión
+                        </label>
+                        <div className="grid grid-cols-2 gap-3">
                             <button
-                                onClick={() => handleComplete('REPARADA')}
-                                disabled={updateMutation.isPending}
-                                className="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-green-500/30 flex items-center justify-center gap-2 transition-all active:scale-95"
+                                onClick={() => setResult('OPERATIVO')}
+                                className={`
+                                    relative overflow-hidden p-4 rounded-xl border-2 transition-all duration-200 font-semibold text-sm flex items-center justify-center gap-2
+                                    ${result === 'OPERATIVO'
+                                        ? 'bg-emerald-500 border-emerald-600 text-white shadow-lg shadow-emerald-500/30 scale-105'
+                                        : 'bg-white border-slate-300 text-slate-700 hover:border-emerald-400 hover:bg-emerald-50'
+                                    }
+                                `}
                             >
                                 <Icon name="check-circle" size={20} />
-                                Marcar como REPARADA
+                                OPERATIVO
                             </button>
                             <button
-                                onClick={() => handleComplete('NO_REPARADA')}
-                                disabled={updateMutation.isPending}
-                                className="w-full px-6 py-3 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-bold rounded-xl shadow-lg shadow-red-500/30 flex items-center justify-center gap-2 transition-all active:scale-95"
+                                onClick={() => setResult('NO_OPERATIVO')}
+                                className={`
+                                    relative overflow-hidden p-4 rounded-xl border-2 transition-all duration-200 font-semibold text-sm flex items-center justify-center gap-2
+                                    ${result === 'NO_OPERATIVO'
+                                        ? 'bg-red-500 border-red-600 text-white shadow-lg shadow-red-500/30 scale-105'
+                                        : 'bg-white border-slate-300 text-slate-700 hover:border-red-400 hover:bg-red-50'
+                                    }
+                                `}
                             >
                                 <Icon name="x-circle" size={20} />
-                                Marcar como NO REPARADA
+                                NO OPERATIVO
                             </button>
+                        </div>
+                    </div>
+
+                    {/* Next Visit */}
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                            Próxima Visita (Opcional)
+                        </label>
+                        <div className="relative">
+                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                <Icon name="clock" size={18} />
+                            </div>
+                            <input
+                                type="datetime-local"
+                                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-slate-900"
+                                value={nextVisitAt}
+                                onChange={e => setNextVisitAt(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="space-y-3 pt-4 border-t border-slate-200">
+                        {currentStatus === 'CREADA' || currentStatus === 'ENVIADA' || currentStatus === 'PROGRAMADA' ? (
                             <button
-                                onClick={handleReschedule}
+                                onClick={handleStartReview}
                                 disabled={updateMutation.isPending}
-                                className="w-full px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold rounded-xl shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2 transition-all active:scale-95"
+                                className="w-full px-6 py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
                             >
-                                <Icon name="clock" size={20} />
-                                Reagendar Visita
+                                <Icon name="check" size={20} />
+                                Iniciar Revisión Técnica
                             </button>
-                        </>
-                    ) : null}
+                        ) : null}
+
+                        {currentStatus === 'EN_REVISION' ? (
+                            <>
+                                <button
+                                    onClick={() => handleComplete('REPARADA')}
+                                    disabled={updateMutation.isPending}
+                                    className="w-full px-6 py-3.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    <Icon name="check-circle" size={20} />
+                                    Completar como REPARADA
+                                </button>
+                                <button
+                                    onClick={() => handleComplete('NO_REPARADA')}
+                                    disabled={updateMutation.isPending}
+                                    className="w-full px-6 py-3.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold rounded-xl shadow-lg shadow-red-500/30 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    <Icon name="x-circle" size={20} />
+                                    Marcar como NO REPARADA
+                                </button>
+                                <button
+                                    onClick={handleReschedule}
+                                    disabled={updateMutation.isPending}
+                                    className="w-full px-6 py-3.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-bold rounded-xl shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    <Icon name="clock" size={20} />
+                                    Reagendar Visita Técnica
+                                </button>
+                            </>
+                        ) : null}
+                    </div>
                 </div>
             </div>
         </div>

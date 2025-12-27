@@ -75,11 +75,11 @@ export const RequestsTable = ({ onCreate, onView }: Props) => {
                         value={filters.terminal}
                         onChange={e => setFilters({ ...filters, terminal: e.target.value })}
                     >
-                        <option value="ALL">🏢 Todos los Terminales</option>
-                        <option value="EL_ROBLE">🌳 El Roble</option>
-                        <option value="LA_REINA">👑 La Reina</option>
-                        <option value="MARIA_ANGELICA">⭐ María Angélica</option>
-                        <option value="EL_DESCANSO">🏞️ El Descanso</option>
+                        <option value="ALL">Todos los Terminales</option>
+                        <option value="EL_ROBLE">El Roble</option>
+                        <option value="LA_REINA">La Reina</option>
+                        <option value="MARIA_ANGELICA">María Angélica</option>
+                        <option value="EL_DESCANSO">El Descanso</option>
                     </select>
 
                     <select
@@ -87,12 +87,12 @@ export const RequestsTable = ({ onCreate, onView }: Props) => {
                         value={filters.status}
                         onChange={e => setFilters({ ...filters, status: e.target.value })}
                     >
-                        <option value="TODOS">📋 Todos los Estados</option>
-                        <option value="CREADA">🆕 Creada</option>
-                        <option value="ENVIADA">📧 Enviada</option>
-                        <option value="PROGRAMADA">📅 Programada</option>
-                        <option value="REPARADA">✅ Reparada</option>
-                        <option value="CERRADA">🔒 Cerrada</option>
+                        <option value="TODOS">Todos los Estados</option>
+                        <option value="CREADA">Creada</option>
+                        <option value="ENVIADA">Enviada</option>
+                        <option value="PROGRAMADA">Programada</option>
+                        <option value="REPARADA">Reparada</option>
+                        <option value="CERRADA">Cerrada</option>
                     </select>
                 </div>
 
