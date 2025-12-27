@@ -52,7 +52,8 @@ type IconName =
     | 'sun'
     | 'moon'
     | 'palmtree'
-    | 'file';
+    | 'file'
+    | 'wrench';
 
 
 interface IconProps {
@@ -217,6 +218,9 @@ const icons: Record<IconName, ReactNode> = {
     ),
     palmtree: (
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 21v-8.25M15.75 21H8.25M12 12.75c0 0-4.5-3-4.5-6.375A4.5 4.5 0 0112 2.25a4.5 4.5 0 014.5 4.125c0 3.375-4.5 6.375-4.5 6.375z" />
+    ),
+    wrench: (
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
     ),
 };
 

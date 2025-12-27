@@ -1229,3 +1229,103 @@ INSERT INTO asis_command_email_settings (intent, recipients, subject_template, e
     ('AUTORIZACION_LLEGADA', '', 'Llegada tardía autorizada - {nombre}', true),
     ('AUTORIZACION_SALIDA', '', 'Salida anticipada autorizada - {nombre}', true)
 ON CONFLICT (intent) DO NOTHING;
+
+-- =============================================
+-- SRL MODULE (Solicitudes y Reparaciones)
+-- =============================================
+
+-- 1. SRL Requests (Header)
+CREATE TABLE IF NOT EXISTS srl_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    terminal_code TEXT NOT NULL,
+    required_date DATE,
+    criticality TEXT CHECK (criticality IN ('BAJA', 'MEDIA', 'ALTA')) DEFAULT 'BAJA',
+    applus BOOLEAN DEFAULT false,
+    status TEXT NOT NULL DEFAULT 'CREADA', -- CREADA, ENVIADA, PROGRAMADA, EN_REVISION, REPARADA, NO_REPARADA, REAGENDADA, CERRADA
+    
+    -- Creation info
+    created_by TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    
+    -- Workflow timestamps
+    sent_at TIMESTAMPTZ,
+    closed_at TIMESTAMPTZ,
+    
+    -- Technician info
+    technician_name TEXT,
+    technician_visit_at TIMESTAMPTZ,
+    technician_message TEXT,
+    result TEXT CHECK (result IN ('OPERATIVO', 'NO_OPERATIVO')),
+    next_visit_at TIMESTAMPTZ,
+    
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 2. SRL Request Buses (Detail)
+CREATE TABLE IF NOT EXISTS srl_request_buses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    request_id UUID REFERENCES srl_requests(id) ON DELETE CASCADE,
+    bus_ppu TEXT NOT NULL,
+    bus_model TEXT,
+    problem_type TEXT,
+    observation TEXT,
+    applus BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 3. SRL Bus Images (Evidence)
+CREATE TABLE IF NOT EXISTS srl_bus_images (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    request_bus_id UUID REFERENCES srl_request_buses(id) ON DELETE CASCADE,
+    storage_path TEXT NOT NULL,
+    mime_type TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 4. SRL Reports (PDFs)
+CREATE TABLE IF NOT EXISTS srl_reports (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    request_id UUID REFERENCES srl_requests(id) ON DELETE CASCADE,
+    storage_path TEXT NOT NULL,
+    uploaded_at TIMESTAMPTZ DEFAULT now(),
+    uploaded_by TEXT
+);
+
+-- 5. SRL Email Settings
+CREATE TABLE IF NOT EXISTS srl_email_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    enabled BOOLEAN DEFAULT true,
+    recipients TEXT NOT NULL DEFAULT '',
+    cc_emails TEXT,
+    subject_template TEXT DEFAULT 'Solicitud SRL - {terminal} - {buses}',
+    body_template TEXT,
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_srl_requests_status ON srl_requests(status);
+CREATE INDEX IF NOT EXISTS idx_srl_requests_terminal ON srl_requests(terminal_code);
+CREATE INDEX IF NOT EXISTS idx_srl_request_buses_ppu ON srl_request_buses(bus_ppu);
+
+-- Enable RLS
+ALTER TABLE srl_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE srl_request_buses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE srl_bus_images ENABLE ROW LEVEL SECURITY;
+ALTER TABLE srl_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE srl_email_settings ENABLE ROW LEVEL SECURITY;
+
+-- Permissive Policies (Authenticated users)
+CREATE POLICY "srl_requests_all" ON srl_requests FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "srl_request_buses_all" ON srl_request_buses FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "srl_bus_images_all" ON srl_bus_images FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "srl_reports_all" ON srl_reports FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "srl_email_settings_all" ON srl_email_settings FOR ALL USING (true) WITH CHECK (true);
+
+-- Realtime
+ALTER PUBLICATION supabase_realtime ADD TABLE srl_requests;
+ALTER PUBLICATION supabase_realtime ADD TABLE srl_request_buses;
+
+-- Initial Settings
+INSERT INTO srl_email_settings (recipients, subject_template) 
+VALUES ('srl@example.com', 'Solicitud SRL - {terminal} - {count} Buses')
+ON CONFLICT DO NOTHING;

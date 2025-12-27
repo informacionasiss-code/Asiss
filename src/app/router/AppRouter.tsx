@@ -21,6 +21,7 @@ import { MiniCheckOdometroPage } from '../../features/minicheck/sections/MiniChe
 import { MiniCheckPublicidadPage } from '../../features/minicheck/sections/MiniCheckPublicidadPage';
 import { EstadoFlotaPage } from '../../features/estado-flota/EstadoFlotaPage';
 import { SolicitudesInsumosPage } from '../../features/solicitudes_insumos/SolicitudesInsumosPage';
+import { SrlPage } from '../../features/srl/pages/SrlPage';
 
 const RequireSession = () => {
   const session = useSessionStore((state) => state.session);
@@ -65,6 +66,7 @@ export const AppRouter = () => (
           <Route path="/minicheck/publicidad" element={<MiniCheckPublicidadPage />} />
           <Route path="/estado-flota" element={<EstadoFlotaPage />} />
           <Route path="/insumos" element={<SolicitudesInsumosPage />} />
+          <Route path="/srl" element={<SrlPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
