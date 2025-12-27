@@ -1181,3 +1181,51 @@ INSERT INTO attendance_2026_email_settings (scope_type, scope_code, recipients, 
 VALUES ('GLOBAL', 'ALL', '', 'Notificación de Asistencia 2026', 'Estimado/a,\n\nSe ha registrado un evento en el sistema de asistencia.\n\nSaludos cordiales.', true)
 ON CONFLICT (scope_type, scope_code) DO NOTHING;
 
+-- ==========================================
+-- ASIS COMMAND - Command Palette System
+-- ==========================================
+
+-- Command logs table
+CREATE TABLE IF NOT EXISTS asis_command_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    command_text TEXT NOT NULL,
+    parsed_intent TEXT,
+    payload_json JSONB DEFAULT '{}',
+    executed_by TEXT NOT NULL,
+    terminal_code TEXT,
+    status TEXT CHECK (status IN ('OK', 'ERROR', 'CANCELLED')) DEFAULT 'OK',
+    error_message TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Email settings per intent
+CREATE TABLE IF NOT EXISTS asis_command_email_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    intent TEXT UNIQUE NOT NULL,
+    recipients TEXT NOT NULL DEFAULT '',
+    subject_template TEXT NOT NULL DEFAULT 'Notificación Asis Command',
+    enabled BOOLEAN DEFAULT true
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_asis_command_logs_created ON asis_command_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_asis_command_logs_executed_by ON asis_command_logs(executed_by);
+
+-- RLS policies (public for now, can be tightened)
+ALTER TABLE asis_command_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE asis_command_email_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "asis_command_logs_all" ON asis_command_logs;
+CREATE POLICY "asis_command_logs_all" ON asis_command_logs FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "asis_command_email_settings_all" ON asis_command_email_settings;
+CREATE POLICY "asis_command_email_settings_all" ON asis_command_email_settings FOR ALL USING (true) WITH CHECK (true);
+
+-- Seed email settings
+INSERT INTO asis_command_email_settings (intent, recipients, subject_template, enabled) VALUES
+    ('VACACIONES', '', 'Vacaciones registradas - {nombre}', true),
+    ('LICENCIA', '', 'Licencia médica registrada - {nombre}', true),
+    ('PERMISO', '', 'Permiso registrado - {nombre}', true),
+    ('AUTORIZACION_LLEGADA', '', 'Llegada tardía autorizada - {nombre}', true),
+    ('AUTORIZACION_SALIDA', '', 'Salida anticipada autorizada - {nombre}', true)
+ON CONFLICT (intent) DO NOTHING;

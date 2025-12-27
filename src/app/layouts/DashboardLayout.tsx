@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from '../../shared/components/layout/Sidebar';
 import { AppHeader } from '../../shared/components/layout/AppHeader';
+import { AsisCommand } from '../../features/asis_command/components/AsisCommand';
 
 export const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -36,6 +37,9 @@ export const DashboardLayout = () => {
           </footer>
         </div>
       </div>
+
+      {/* Asis Command - Global FAB */}
+      <AsisCommand />
     </div>
   );
 };
