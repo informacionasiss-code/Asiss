@@ -163,29 +163,202 @@ export const Asistencia2026Page = () => {
         setFilters((f) => ({ ...f, terminal }));
     };
 
-    // Export XLSX
+    // Export XLSX - Professional multi-sheet export
     const handleExportXlsx = () => {
-        const data = staff.map((s) => {
-            const staffMarks = marks.filter((m) => m.staff_id === s.id);
-            return {
-                RUT: s.rut,
-                Nombre: s.nombre,
-                Cargo: s.cargo,
-                Terminal: s.terminal_code,
-                Horario: s.horario,
-                Turno: s.turno,
-                Estado: s.status,
-                Presentes: staffMarks.filter((m) => m.mark === 'P').length,
-                Ausentes: staffMarks.filter((m) => m.mark === 'A').length,
-                Licencias: licenses.filter((l) => l.staff_id === s.id).length,
-                Permisos: permissions.filter((p) => p.staff_id === s.id).length,
+        const wb = XLSX.utils.book_new();
+        const weekRange = formatWeekRange(weekStart);
+
+        // Helper to format date for column headers (e.g., "Lun 29/12")
+        const formatDateHeader = (dateStr: string) => {
+            const d = new Date(dateStr + 'T12:00:00');
+            const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+            return `${days[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`;
+        };
+
+        // Get day status for a staff member (same logic as grid)
+        const getStatusText = (s: StaffWithShift, date: string): string => {
+            const mark = marks.find(m => m.staff_id === s.id && m.mark_date === date);
+            const hasLicense = licenses.some(l => l.staff_id === s.id && date >= l.start_date && date <= l.end_date);
+            const hasVacation = vacations.some(v => v.staff_id === s.id && date >= v.start_date && date <= v.end_date);
+            const hasPerm = permissions.some(p => p.staff_id === s.id && date >= p.start_date && date <= p.end_date);
+
+            if (hasLicense) return 'LIC';
+            if (hasVacation) return 'VAC';
+            if (hasPerm) return 'PER';
+            if (mark) return mark.mark; // P or A
+
+            // Check if off day
+            const dayOfWeek = new Date(date + 'T12:00:00').getDay();
+            const shiftType = s.shift ? shiftTypes.find(st => st.code === s.shift!.shift_type_code) : null;
+            let isOff = dayOfWeek === 0 || dayOfWeek === 6;
+            if (shiftType?.pattern_json) {
+                // Use pattern - simplified check
+                if (shiftType.pattern_json.type === 'fixed' && shiftType.pattern_json.offDays) {
+                    isOff = shiftType.pattern_json.offDays.includes(dayOfWeek);
+                }
+            }
+            if (isOff) return 'L';
+            return '-'; // Pending
+        };
+
+        // ===== SHEET 1: ASISTENCIA SEMANAL =====
+        const attendanceData = staff.map(s => {
+            const row: Record<string, string> = {
+                'RUT': s.rut,
+                'Nombre': s.nombre,
+                'Cargo': s.cargo,
+                'Terminal': s.terminal_code,
+                'Horario': s.horario || '',
             };
+            // Add each day of the week
+            for (const date of weekDates) {
+                row[formatDateHeader(date)] = getStatusText(s, date);
+            }
+            return row;
         });
 
-        const ws = XLSX.utils.json_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Asistencia');
-        XLSX.writeFile(wb, `Asistencia_${formatWeekRange(weekStart).replace(/\s/g, '_')}.xlsx`);
+        const wsAttendance = XLSX.utils.json_to_sheet(attendanceData);
+        // Set column widths
+        wsAttendance['!cols'] = [
+            { wch: 12 }, // RUT
+            { wch: 30 }, // Nombre
+            { wch: 15 }, // Cargo
+            { wch: 12 }, // Terminal
+            { wch: 12 }, // Horario
+            ...weekDates.map(() => ({ wch: 10 })), // Each day
+        ];
+        XLSX.utils.book_append_sheet(wb, wsAttendance, 'Asistencia Semanal');
+
+        // ===== SHEET 2: SIN CREDENCIAL =====
+        const ncData = incidences?.sinCredenciales
+            ?.filter(item => weekDates.includes(item.date))
+            ?.map(item => {
+                const staffMember = staff.find(s => s.rut === item.rut);
+                return {
+                    'Fecha': item.date,
+                    'RUT': item.rut,
+                    'Nombre': staffMember?.nombre || 'N/A',
+                    'Cargo': staffMember?.cargo || 'N/A',
+                    'Terminal': staffMember?.terminal_code || 'N/A',
+                };
+            }) || [];
+        const wsNC = XLSX.utils.json_to_sheet(ncData.length > 0 ? ncData : [{ 'Info': 'Sin registros esta semana' }]);
+        XLSX.utils.book_append_sheet(wb, wsNC, 'Sin Credencial');
+
+        // ===== SHEET 3: NO MARCACIÓN =====
+        const nmData = incidences?.noMarcaciones
+            ?.filter(item => weekDates.includes(item.date))
+            ?.map(item => {
+                const staffMember = staff.find(s => s.rut === item.rut);
+                return {
+                    'Fecha': item.date,
+                    'RUT': item.rut,
+                    'Nombre': staffMember?.nombre || 'N/A',
+                    'Cargo': staffMember?.cargo || 'N/A',
+                    'Terminal': staffMember?.terminal_code || 'N/A',
+                };
+            }) || [];
+        const wsNM = XLSX.utils.json_to_sheet(nmData.length > 0 ? nmData : [{ 'Info': 'Sin registros esta semana' }]);
+        XLSX.utils.book_append_sheet(wb, wsNM, 'No Marcación');
+
+        // ===== SHEET 4: CAMBIOS DE DÍA =====
+        const cdData = incidences?.cambiosDia
+            ?.filter(item => weekDates.includes(item.date))
+            ?.map(item => {
+                const staffMember = staff.find(s => s.rut === item.rut);
+                return {
+                    'Fecha': item.date,
+                    'RUT': item.rut,
+                    'Nombre': staffMember?.nombre || 'N/A',
+                    'Cargo': staffMember?.cargo || 'N/A',
+                    'Terminal': staffMember?.terminal_code || 'N/A',
+                };
+            }) || [];
+        const wsCD = XLSX.utils.json_to_sheet(cdData.length > 0 ? cdData : [{ 'Info': 'Sin registros esta semana' }]);
+        XLSX.utils.book_append_sheet(wb, wsCD, 'Cambios de Día');
+
+        // ===== SHEET 5: AUTORIZACIONES =====
+        const autData = incidences?.autorizaciones
+            ?.filter(item => weekDates.includes(item.date))
+            ?.map(item => {
+                const staffMember = staff.find(s => s.rut === item.rut);
+                return {
+                    'Fecha': item.date,
+                    'RUT': item.rut,
+                    'Nombre': staffMember?.nombre || 'N/A',
+                    'Cargo': staffMember?.cargo || 'N/A',
+                    'Terminal': staffMember?.terminal_code || 'N/A',
+                };
+            }) || [];
+        const wsAut = XLSX.utils.json_to_sheet(autData.length > 0 ? autData : [{ 'Info': 'Sin registros esta semana' }]);
+        XLSX.utils.book_append_sheet(wb, wsAut, 'Autorizaciones');
+
+        // ===== SHEET 6: VACACIONES =====
+        const vacData = vacations
+            .filter(v => weekDates.some(d => d >= v.start_date && d <= v.end_date))
+            .map(v => {
+                const staffMember = staff.find(s => s.id === v.staff_id);
+                return {
+                    'RUT': staffMember?.rut || 'N/A',
+                    'Nombre': staffMember?.nombre || 'N/A',
+                    'Cargo': staffMember?.cargo || 'N/A',
+                    'Terminal': staffMember?.terminal_code || 'N/A',
+                    'Inicio': v.start_date,
+                    'Fin': v.end_date,
+                };
+            });
+        const wsVac = XLSX.utils.json_to_sheet(vacData.length > 0 ? vacData : [{ 'Info': 'Sin vacaciones esta semana' }]);
+        XLSX.utils.book_append_sheet(wb, wsVac, 'Vacaciones');
+
+        // ===== SHEET 7: LICENCIAS =====
+        const licData = licenses
+            .filter(l => weekDates.some(d => d >= l.start_date && d <= l.end_date))
+            .map(l => {
+                const staffMember = staff.find(s => s.id === l.staff_id);
+                return {
+                    'RUT': staffMember?.rut || 'N/A',
+                    'Nombre': staffMember?.nombre || 'N/A',
+                    'Cargo': staffMember?.cargo || 'N/A',
+                    'Terminal': staffMember?.terminal_code || 'N/A',
+                    'Inicio': l.start_date,
+                    'Fin': l.end_date,
+                    'Nota': l.note || '',
+                };
+            });
+        const wsLic = XLSX.utils.json_to_sheet(licData.length > 0 ? licData : [{ 'Info': 'Sin licencias esta semana' }]);
+        XLSX.utils.book_append_sheet(wb, wsLic, 'Licencias');
+
+        // ===== SHEET 8: RESUMEN =====
+        const presentCount = staff.reduce((acc, s) => {
+            return acc + weekDates.filter(d => getStatusText(s, d) === 'P').length;
+        }, 0);
+        const absentCount = staff.reduce((acc, s) => {
+            return acc + weekDates.filter(d => getStatusText(s, d) === 'A').length;
+        }, 0);
+        const pendingCount = staff.reduce((acc, s) => {
+            return acc + weekDates.filter(d => getStatusText(s, d) === '-').length;
+        }, 0);
+
+        const summaryData = [
+            { 'Concepto': 'Semana', 'Valor': weekRange },
+            { 'Concepto': 'Total Personal', 'Valor': staff.length.toString() },
+            { 'Concepto': 'Marcas Presente', 'Valor': presentCount.toString() },
+            { 'Concepto': 'Marcas Ausente', 'Valor': absentCount.toString() },
+            { 'Concepto': 'Marcas Pendientes', 'Valor': pendingCount.toString() },
+            { 'Concepto': 'Vacaciones Activas', 'Valor': vacData.length.toString() },
+            { 'Concepto': 'Licencias Activas', 'Valor': licData.length.toString() },
+            { 'Concepto': 'Sin Credencial', 'Valor': ncData.length.toString() },
+            { 'Concepto': 'No Marcación', 'Valor': nmData.length.toString() },
+            { 'Concepto': 'Cambios de Día', 'Valor': cdData.length.toString() },
+            { 'Concepto': 'Autorizaciones', 'Valor': autData.length.toString() },
+        ];
+        const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+        wsSummary['!cols'] = [{ wch: 20 }, { wch: 30 }];
+        XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumen');
+
+        // Save file
+        const fileName = `Asistencia_${weekRange.replace(/\s/g, '_').replace(/\//g, '-')}.xlsx`;
+        XLSX.writeFile(wb, fileName);
     };
 
     // Offboarding
@@ -260,8 +433,8 @@ export const Asistencia2026Page = () => {
                                 key={t.value}
                                 onClick={() => handleTerminalChange(t.value)}
                                 className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${filters.terminal === t.value
-                                        ? TERMINAL_COLORS[t.value]
-                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                    ? TERMINAL_COLORS[t.value]
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                     }`}
                             >
                                 {t.label}
@@ -279,8 +452,8 @@ export const Asistencia2026Page = () => {
                                 key={opt.value}
                                 onClick={() => setFilters((f) => ({ ...f, turno: opt.value }))}
                                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${filters.turno === opt.value
-                                        ? 'bg-white text-slate-800 shadow-sm'
-                                        : 'text-slate-600 hover:text-slate-800'
+                                    ? 'bg-white text-slate-800 shadow-sm'
+                                    : 'text-slate-600 hover:text-slate-800'
                                     }`}
                             >
                                 {opt.label}
