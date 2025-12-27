@@ -40,15 +40,10 @@ export const DayActionPanel = ({
     onRequestOffboarding,
     isManager = false,
 }: DayActionPanelProps) => {
-    const [activeForm, setActiveForm] = useState<'none' | 'absent' | 'license' | 'permission'>('none');
-    const [absentNote, setAbsentNote] = useState('');
+    const [activeForm, setActiveForm] = useState<'none' | 'license'>('none');
     const [licenseStart, setLicenseStart] = useState(date);
     const [licenseEnd, setLicenseEnd] = useState(date);
     const [licenseNote, setLicenseNote] = useState('');
-    const [permissionStart, setPermissionStart] = useState(date);
-    const [permissionEnd, setPermissionEnd] = useState(date);
-    const [permissionType, setPermissionType] = useState('PERSONAL');
-    const [permissionNote, setPermissionNote] = useState('');
 
     if (!isOpen || !staff) return null;
 
@@ -56,23 +51,9 @@ export const DayActionPanel = ({
     const dayNumber = new Date(date + 'T12:00:00').getDate();
     const isDesvinculado = staff.status === 'DESVINCULADO';
 
-    const handleMarkAbsent = () => {
-        if (absentNote.trim()) {
-            onMarkAbsent(absentNote.trim());
-            setAbsentNote('');
-            setActiveForm('none');
-        }
-    };
-
     const handleRegisterLicense = () => {
         onRegisterLicense(licenseStart, licenseEnd, licenseNote || undefined);
         setLicenseNote('');
-        setActiveForm('none');
-    };
-
-    const handleRegisterPermission = () => {
-        onRegisterPermission(permissionStart, permissionEnd, permissionType, permissionNote || undefined);
-        setPermissionNote('');
         setActiveForm('none');
     };
 
@@ -137,7 +118,7 @@ export const DayActionPanel = ({
                                     Presente (P)
                                 </button>
                                 <button
-                                    onClick={() => setActiveForm('absent')}
+                                    onClick={() => onMarkAbsent('')}
                                     className={`flex-1 py-2 rounded-lg font-medium transition-colors ${BUTTON_VARIANTS.danger}`}
                                 >
                                     <Icon name="x" size={16} className="inline mr-1" />
@@ -147,58 +128,18 @@ export const DayActionPanel = ({
                         </div>
                     )}
 
-                    {/* Absent form */}
-                    {activeForm === 'absent' && (
-                        <div className="space-y-3 p-3 bg-red-50 rounded-lg border border-red-100">
-                            <h4 className="text-sm font-medium text-red-800">Registrar Ausencia</h4>
-                            <textarea
-                                value={absentNote}
-                                onChange={(e) => setAbsentNote(e.target.value)}
-                                placeholder="Motivo de la ausencia (requerido)"
-                                className="w-full p-2 border rounded-lg text-sm resize-none"
-                                rows={2}
-                            />
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={handleMarkAbsent}
-                                    disabled={!absentNote.trim()}
-                                    className="flex-1 py-2 rounded-lg font-medium bg-red-600 text-white disabled:opacity-50"
-                                >
-                                    Confirmar
-                                </button>
-                                <button
-                                    onClick={() => setActiveForm('none')}
-                                    className="px-4 py-2 rounded-lg font-medium bg-slate-100 text-slate-600"
-                                >
-                                    Cancelar
-                                </button>
-                            </div>
-                        </div>
-                    )}
 
-                    {/* Register license/permission */}
+
+                    {/* Register license */}
                     {!isDesvinculado && activeForm === 'none' && (
                         <div className="space-y-2">
                             <h4 className="text-sm font-medium text-slate-700">Registrar</h4>
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="flex gap-2">
                                 <button
                                     onClick={() => setActiveForm('license')}
-                                    className={`py-2 px-3 rounded-lg text-sm font-medium ${DAY_COLORS.LIC.bg} ${DAY_COLORS.LIC.text} border ${DAY_COLORS.LIC.border}`}
+                                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium ${DAY_COLORS.LIC.bg} ${DAY_COLORS.LIC.text} border ${DAY_COLORS.LIC.border}`}
                                 >
                                     Licencia
-                                </button>
-                                <button
-                                    onClick={() => setActiveForm('permission')}
-                                    className={`py-2 px-3 rounded-lg text-sm font-medium ${DAY_COLORS.PER.bg} ${DAY_COLORS.PER.text} border ${DAY_COLORS.PER.border}`}
-                                >
-                                    Permiso
-                                </button>
-                                <button
-                                    disabled
-                                    className={`py-2 px-3 rounded-lg text-sm font-medium ${DAY_COLORS.VAC.bg} ${DAY_COLORS.VAC.text} border ${DAY_COLORS.VAC.border} opacity-50 cursor-not-allowed`}
-                                    title="Gestionar en sección Vacaciones"
-                                >
-                                    Vacación
                                 </button>
                             </div>
                         </div>
@@ -252,63 +193,7 @@ export const DayActionPanel = ({
                         </div>
                     )}
 
-                    {/* Permission form */}
-                    {activeForm === 'permission' && (
-                        <div className="space-y-3 p-3 bg-amber-50 rounded-lg border border-amber-100">
-                            <h4 className="text-sm font-medium text-amber-800">Registrar Permiso</h4>
-                            <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label className="text-xs text-slate-600">Desde</label>
-                                    <input
-                                        type="date"
-                                        value={permissionStart}
-                                        onChange={(e) => setPermissionStart(e.target.value)}
-                                        className="w-full p-2 border rounded-lg text-sm"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs text-slate-600">Hasta</label>
-                                    <input
-                                        type="date"
-                                        value={permissionEnd}
-                                        onChange={(e) => setPermissionEnd(e.target.value)}
-                                        className="w-full p-2 border rounded-lg text-sm"
-                                    />
-                                </div>
-                            </div>
-                            <select
-                                value={permissionType}
-                                onChange={(e) => setPermissionType(e.target.value)}
-                                className="w-full p-2 border rounded-lg text-sm"
-                            >
-                                <option value="PERSONAL">Personal</option>
-                                <option value="MEDICO">Médico</option>
-                                <option value="FAMILIAR">Familiar</option>
-                                <option value="OTRO">Otro</option>
-                            </select>
-                            <textarea
-                                value={permissionNote}
-                                onChange={(e) => setPermissionNote(e.target.value)}
-                                placeholder="Notas (opcional)"
-                                className="w-full p-2 border rounded-lg text-sm resize-none"
-                                rows={2}
-                            />
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={handleRegisterPermission}
-                                    className="flex-1 py-2 rounded-lg font-medium bg-amber-600 text-white"
-                                >
-                                    Guardar
-                                </button>
-                                <button
-                                    onClick={() => setActiveForm('none')}
-                                    className="px-4 py-2 rounded-lg font-medium bg-slate-100 text-slate-600"
-                                >
-                                    Cancelar
-                                </button>
-                            </div>
-                        </div>
-                    )}
+
 
                     {/* Incidences */}
                     {incidencies.length > 0 && (
