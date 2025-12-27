@@ -26,10 +26,11 @@ export interface SrlRequest {
     closed_at: string | null;
 
     // Technician
-    technician_name: string | null;
-    technician_visit_at: string | null;
-    technician_message: string | null;
-    result: 'OPERATIVO' | 'NO_OPERATIVO' | null;
+    technician_name?: string | null;
+    technician_visit_at?: string | null;
+    technician_message?: string | null;
+    technician_document_url?: string | null; // NEW: Document uploaded by technician
+    result?: 'OPERATIVO' | 'NO_OPERATIVO' | null;
     next_visit_at: string | null;
 
     updated_at: string;

@@ -168,8 +168,8 @@ export const RequestDetailModal = ({ isOpen, onClose, requestId }: Props) => {
                                     <div className="bg-white rounded-lg p-4 border border-slate-200">
                                         <p className="text-xs font-bold text-slate-500 uppercase mb-1">Resultado</p>
                                         <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${request.result === 'OPERATIVO'
-                                                ? 'bg-emerald-100 text-emerald-700'
-                                                : 'bg-red-100 text-red-700'
+                                            ? 'bg-emerald-100 text-emerald-700'
+                                            : 'bg-red-100 text-red-700'
                                             }`}>
                                             {request.result}
                                         </span>
@@ -191,6 +191,42 @@ export const RequestDetailModal = ({ isOpen, onClose, requestId }: Props) => {
                                 <div className="mt-4 bg-white rounded-lg p-4 border border-slate-200">
                                     <p className="text-xs font-bold text-slate-500 uppercase mb-2">Observaciones del Técnico</p>
                                     <p className="text-sm text-slate-700 whitespace-pre-wrap">{request.technician_message}</p>
+                                </div>
+                            )}
+                            {request.technician_document_url && (
+                                <div className="mt-4 bg-white rounded-lg p-4 border border-slate-200">
+                                    <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2">
+                                        <Icon name="file-text" size={16} />
+                                        Documento Técnico
+                                    </p>
+                                    <a
+                                        href={request.technician_document_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block relative group"
+                                    >
+                                        {request.technician_document_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                                            <div className="relative rounded-lg overflow-hidden border-2 border-slate-200 hover:border-blue-400 transition-all">
+                                                <img
+                                                    src={request.technician_document_url}
+                                                    alt="Documento Técnico"
+                                                    className="w-full max-w-md mx-auto object-contain group-hover:scale-105 transition-transform duration-300"
+                                                />
+                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
+                                                    <Icon name="search" size={32} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 rounded-lg border-2 border-blue-200 hover:bg-blue-100 transition-colors">
+                                                <Icon name="file" size={24} className="text-blue-600" />
+                                                <div className="flex-1">
+                                                    <p className="text-sm font-semibold text-blue-900">Ver Documento PDF</p>
+                                                    <p className="text-xs text-blue-600">Click para abrir</p>
+                                                </div>
+                                                <Icon name="chevron-right" size={18} className="text-blue-600" />
+                                            </div>
+                                        )}
+                                    </a>
                                 </div>
                             )}
                         </div>
