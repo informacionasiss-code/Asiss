@@ -24,7 +24,7 @@ import {
     getReducedHourDays,
     getAdjustedHorario,
 } from '../utils/shiftEngine';
-import { useShiftTypes } from '../hooks';
+import { useShiftTypes, useAllSpecialTemplates } from '../hooks';
 
 interface RutPdfExportModalProps {
     isOpen: boolean;
@@ -58,6 +58,10 @@ export const RutPdfExportModal = ({
 
     const { data: shiftTypes = [] } = useShiftTypes();
 
+    // Get special templates for staff with ESPECIAL shifts
+    const staffIds = useMemo(() => staff.map(s => s.id), [staff]);
+    const { data: specialTemplates = [] } = useAllSpecialTemplates(staffIds);
+
     const shiftTypesMap = useMemo(() => {
         const map = new Map<string, ShiftType>();
         for (const st of shiftTypes) {
@@ -65,6 +69,14 @@ export const RutPdfExportModal = ({
         }
         return map;
     }, [shiftTypes]);
+
+    const specialTemplatesMap = useMemo(() => {
+        const map = new Map<string, any>();
+        for (const template of specialTemplates) {
+            map.set(template.staff_id, template);
+        }
+        return map;
+    }, [specialTemplates]);
 
     const selectedStaff = staff.find((s) => s.rut === selectedRut);
 
@@ -216,7 +228,14 @@ export const RutPdfExportModal = ({
                     if (selectedStaff.shift) {
                         const shiftPattern = shiftType?.pattern_json;
                         if (shiftPattern) {
-                            isOff = isOffDay(dateStr, selectedStaff.shift.shift_type_code, selectedStaff.shift.variant_code, shiftPattern);
+                            const specialTemplate = specialTemplatesMap.get(selectedStaff.id);
+                            isOff = isOffDay(
+                                dateStr,
+                                selectedStaff.shift.shift_type_code,
+                                selectedStaff.shift.variant_code,
+                                shiftPattern,
+                                specialTemplate
+                            );
                         }
                     } else {
                         const dayOfWeek = date.getDay();
