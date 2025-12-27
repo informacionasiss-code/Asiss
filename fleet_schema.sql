@@ -1,0 +1,275 @@
+-- ==========================================
+-- FLEET VEHICLES TABLE
+-- ==========================================
+-- Tabla de vehículos de la flota para Estado de Flota y Aseo
+
+CREATE TABLE IF NOT EXISTS public.fleet_vehicles (
+    ppu TEXT PRIMARY KEY,
+    numero_interno INTEGER NOT NULL,
+    marca_modelo TEXT NOT NULL,
+    terminal TEXT NOT NULL,
+    estado TEXT DEFAULT 'operativo' CHECK (estado IN ('operativo', 'en_taller', 'fuera_servicio')),
+    odometro INTEGER DEFAULT 0,
+    proxima_mantencion DATE,
+    ultima_limpieza TIMESTAMP,
+    requiere_limpieza BOOLEAN DEFAULT false,
+    notas TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Índices para búsquedas rápidas
+CREATE INDEX IF NOT EXISTS idx_fleet_terminal ON public.fleet_vehicles(terminal);
+CREATE INDEX IF NOT EXISTS idx_fleet_estado ON public.fleet_vehicles(estado);
+CREATE INDEX IF NOT EXISTS idx_fleet_requiere_limpieza ON public.fleet_vehicles(requiere_limpieza);
+CREATE INDEX IF NOT EXISTS idx_fleet_ultima_limpieza ON public.fleet_vehicles(ultima_limpieza);
+
+-- RLS Policies
+ALTER TABLE public.fleet_vehicles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Fleet vehicles are viewable by everyone"
+    ON public.fleet_vehicles FOR SELECT
+    USING (true);
+
+CREATE POLICY "Fleet vehicles are insertable by authenticated users"
+    ON public.fleet_vehicles FOR INSERT
+    WITH CHECK (true);
+
+CREATE POLICY "Fleet vehicles are updatable by authenticated users"
+    ON public.fleet_vehicles FOR UPDATE
+    USING (true);
+
+-- Trigger para actualizar updated_at
+CREATE OR REPLACE FUNCTION update_fleet_vehicles_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER fleet_vehicles_updated_at
+    BEFORE UPDATE ON public.fleet_vehicles
+    FOR EACH ROW
+    EXECUTE FUNCTION update_fleet_vehicles_updated_at();
+
+-- ==========================================
+-- INSERTAR DATOS DE LA FLOTA EL ROBLE
+-- ==========================================
+
+INSERT INTO public.fleet_vehicles (ppu, numero_interno, marca_modelo, terminal) VALUES
+('SHCX39', 922, 'VOLVO', 'EL_ROBLE'),
+('SHCY22', 936, 'VOLVO', 'EL_ROBLE'),
+('SHCY28', 942, 'VOLVO', 'EL_ROBLE'),
+('SHXD75', 1455, 'VOLVO', 'EL_ROBLE'),
+('SHXD77', 1456, 'VOLVO', 'EL_ROBLE'),
+('SHXD79', 1457, 'VOLVO', 'EL_ROBLE'),
+('SHXD85', 1459, 'VOLVO', 'EL_ROBLE'),
+('SHXF13', 1460, 'VOLVO', 'EL_ROBLE'),
+('SHXF14', 1461, 'VOLVO', 'EL_ROBLE'),
+('SHXF29', 1462, 'VOLVO', 'EL_ROBLE'),
+('SHXF31', 1463, 'VOLVO', 'EL_ROBLE'),
+('SHXF84', 1465, 'VOLVO', 'EL_ROBLE'),
+('SHXF85', 1466, 'VOLVO', 'EL_ROBLE'),
+('SHXF87', 1467, 'VOLVO', 'EL_ROBLE'),
+('SHXF88', 1468, 'VOLVO', 'EL_ROBLE'),
+('SHXF90', 1469, 'VOLVO', 'EL_ROBLE'),
+('SHXF92', 1470, 'VOLVO', 'EL_ROBLE'),
+('SHXF93', 1471, 'VOLVO', 'EL_ROBLE'),
+('SHXF97', 1472, 'VOLVO', 'EL_ROBLE'),
+('SHXG36', 1475, 'VOLVO', 'EL_ROBLE'),
+('SHXG38', 1476, 'VOLVO', 'EL_ROBLE'),
+('SJPB21', 1606, 'VOLVO', 'EL_ROBLE'),
+('SJPB25', 1610, 'VOLVO', 'EL_ROBLE'),
+('SJPC73', 1636, 'VOLVO', 'EL_ROBLE'),
+('SJPD42', 1647, 'VOLVO', 'EL_ROBLE'),
+('SJPD44', 1649, 'VOLVO', 'EL_ROBLE'),
+('SJPD71', 1655, 'VOLVO', 'EL_ROBLE'),
+('SJPD72', 1656, 'VOLVO', 'EL_ROBLE'),
+('SJPD97', 1663, 'VOLVO', 'EL_ROBLE'),
+('SJPF43', 1667, 'VOLVO', 'EL_ROBLE'),
+('SJPF44', 1668, 'VOLVO', 'EL_ROBLE'),
+('SKPH70', 1682, 'VOLVO', 'EL_ROBLE'),
+('SKPH73', 1684, 'VOLVO', 'EL_ROBLE'),
+('SKPJ90', 1822, 'VOLVO', 'EL_ROBLE'),
+('SKPK18', 1823, 'VOLVO', 'EL_ROBLE'),
+('SKPK19', 1824, 'VOLVO', 'EL_ROBLE'),
+('SKPK21', 1826, 'VOLVO', 'EL_ROBLE'),
+('SKPK22', 1827, 'VOLVO', 'EL_ROBLE'),
+('SKPK23', 1828, 'VOLVO', 'EL_ROBLE'),
+('SKPK25', 1829, 'VOLVO', 'EL_ROBLE'),
+('SKPK26', 1830, 'VOLVO', 'EL_ROBLE'),
+('SKPK27', 1831, 'VOLVO', 'EL_ROBLE'),
+('SKPK28', 1832, 'VOLVO', 'EL_ROBLE'),
+('SKPK31', 1834, 'VOLVO', 'EL_ROBLE'),
+('SKPK32', 1835, 'VOLVO', 'EL_ROBLE'),
+('SKPK34', 1837, 'VOLVO', 'EL_ROBLE'),
+('SKPK35', 1838, 'VOLVO', 'EL_ROBLE'),
+('SKPK37', 1839, 'VOLVO', 'EL_ROBLE'),
+('SKPK39', 1840, 'VOLVO', 'EL_ROBLE'),
+('SKPK40', 1841, 'VOLVO', 'EL_ROBLE'),
+('SKPK42', 1843, 'VOLVO', 'EL_ROBLE'),
+('SKPK44', 1844, 'VOLVO', 'EL_ROBLE'),
+('SKPK45', 1845, 'VOLVO', 'EL_ROBLE'),
+('SKPK62', 1846, 'VOLVO', 'EL_ROBLE'),
+('SKPK63', 1847, 'VOLVO', 'EL_ROBLE'),
+('SKPL28', 1848, 'VOLVO', 'EL_ROBLE'),
+('SKPL30', 1849, 'VOLVO', 'EL_ROBLE'),
+('SKPL33', 1850, 'VOLVO', 'EL_ROBLE'),
+('SKPL34', 1851, 'VOLVO', 'EL_ROBLE'),
+('SKPL36', 1852, 'VOLVO', 'EL_ROBLE'),
+('PFTW34', 1872, 'SCANIA', 'EL_ROBLE'),
+('SKPK20', 1825, 'VOLVO', 'EL_ROBLE'),
+('LXWP79', 1864, 'SCANIA', 'EL_ROBLE'),
+('PFVG98', 1716, 'SCANIA', 'EL_ROBLE'),
+('LXWP57', 1919, 'SCANIA', 'EL_ROBLE'),
+('LXWP58', 1931, 'SCANIA', 'EL_ROBLE'),
+('LXWP59', 1932, 'SCANIA', 'EL_ROBLE'),
+('LXWP60', 1885, 'SCANIA', 'EL_ROBLE'),
+('LXWP61', 1920, 'SCANIA', 'EL_ROBLE'),
+('LXWP62', 1921, 'SCANIA', 'EL_ROBLE'),
+('LXWP64', 1886, 'SCANIA', 'EL_ROBLE'),
+('LXWP66', 1693, 'SCANIA', 'EL_ROBLE'),
+('LXWP67', 1854, 'SCANIA', 'EL_ROBLE'),
+('LXWP68', 1855, 'SCANIA', 'EL_ROBLE'),
+('LXWP69', 1856, 'SCANIA', 'EL_ROBLE'),
+('LXWP70', 1857, 'SCANIA', 'EL_ROBLE'),
+('LXWP71', 1858, 'SCANIA', 'EL_ROBLE'),
+('LXWP72', 1859, 'SCANIA', 'EL_ROBLE'),
+('LXWP73', 1860, 'SCANIA', 'EL_ROBLE'),
+('LXWP74', 1861, 'SCANIA', 'EL_ROBLE'),
+('LXWP75', 1862, 'SCANIA', 'EL_ROBLE'),
+('LXWP76', 1694, 'SCANIA', 'EL_ROBLE'),
+('LXWP77', 1695, 'SCANIA', 'EL_ROBLE'),
+('LXWP78', 1863, 'SCANIA', 'EL_ROBLE'),
+('PFTW35', 1892, 'SCANIA', 'EL_ROBLE'),
+('PFTW36', 1702, 'SCANIA', 'EL_ROBLE'),
+('PFTW38', 1873, 'SCANIA', 'EL_ROBLE'),
+('PFTW39', 1893, 'SCANIA', 'EL_ROBLE'),
+('PFTW40', 1703, 'SCANIA', 'EL_ROBLE'),
+('PFTW41', 1894, 'SCANIA', 'EL_ROBLE'),
+('PFTW42', 1895, 'SCANIA', 'EL_ROBLE'),
+('PFTW44', 1874, 'SCANIA', 'EL_ROBLE'),
+('PFTW45', 1875, 'SCANIA', 'EL_ROBLE'),
+('PFTW46', 1704, 'SCANIA', 'EL_ROBLE'),
+('PFTW47', 1876, 'SCANIA', 'EL_ROBLE'),
+('PFTW48', 1896, 'SCANIA', 'EL_ROBLE'),
+('PFTW49', 1877, 'SCANIA', 'EL_ROBLE'),
+('PFTW50', 1878, 'SCANIA', 'EL_ROBLE'),
+('PFTW51', 1897, 'SCANIA', 'EL_ROBLE'),
+('PFTW55', 1898, 'SCANIA', 'EL_ROBLE'),
+('PFTW56', 1879, 'SCANIA', 'EL_ROBLE'),
+('PFTW57', 1705, 'SCANIA', 'EL_ROBLE'),
+('PFYC20', 1726, 'SCANIA', 'EL_ROBLE'),
+('LXWP80', 1865, 'SCANIA', 'EL_ROBLE'),
+('LXWP81', 1696, 'SCANIA', 'EL_ROBLE'),
+('LXWP82', 1866, 'SCANIA', 'EL_ROBLE'),
+('LXWP83', 1867, 'SCANIA', 'EL_ROBLE'),
+('LXWP85', 1697, 'SCANIA', 'EL_ROBLE'),
+('LXWP86', 1698, 'SCANIA', 'EL_ROBLE'),
+('LXWP87', 1888, 'SCANIA', 'EL_ROBLE'),
+('PFTV77', 1699, 'SCANIA', 'EL_ROBLE'),
+('PFTW19', 1889, 'SCANIA', 'EL_ROBLE'),
+('PFTW20', 1890, 'SCANIA', 'EL_ROBLE'),
+('PFTW25', 1700, 'SCANIA', 'EL_ROBLE'),
+('PFTW26', 1891, 'SCANIA', 'EL_ROBLE'),
+('PFTW28', 1868, 'SCANIA', 'EL_ROBLE'),
+('PFTW29', 1869, 'SCANIA', 'EL_ROBLE'),
+('PFTW30', 1870, 'SCANIA', 'EL_ROBLE'),
+('PFTW31', 1871, 'SCANIA', 'EL_ROBLE'),
+('PFTW32', 1701, 'SCANIA', 'EL_ROBLE'),
+('PFTW58', 1880, 'SCANIA', 'EL_ROBLE'),
+('PFTW59', 1899, 'SCANIA', 'EL_ROBLE'),
+('PFTW60', 1706, 'SCANIA', 'EL_ROBLE'),
+('PFTW61', 1900, 'SCANIA', 'EL_ROBLE'),
+('PFTW62', 1901, 'SCANIA', 'EL_ROBLE'),
+('PFVG75', 1902, 'SCANIA', 'EL_ROBLE'),
+('PFVG76', 1903, 'SCANIA', 'EL_ROBLE'),
+('PFVG77', 1904, 'SCANIA', 'EL_ROBLE'),
+('PFVG78', 1707, 'SCANIA', 'EL_ROBLE'),
+('PFVG79', 1881, 'SCANIA', 'EL_ROBLE'),
+('PFVG80', 1708, 'SCANIA', 'EL_ROBLE'),
+('PFVG82', 1709, 'SCANIA', 'EL_ROBLE'),
+('PFVG83', 1710, 'SCANIA', 'EL_ROBLE'),
+('PFVG85', 1711, 'SCANIA', 'EL_ROBLE'),
+('PFVG86', 1712, 'SCANIA', 'EL_ROBLE'),
+('PFVG87', 1713, 'SCANIA', 'EL_ROBLE'),
+('PFVG88', 1714, 'SCANIA', 'EL_ROBLE'),
+('PFVG89', 1905, 'SCANIA', 'EL_ROBLE'),
+('PFVG90', 1906, 'SCANIA', 'EL_ROBLE'),
+('PFVG92', 1907, 'SCANIA', 'EL_ROBLE'),
+('PFVG94', 1909, 'SCANIA', 'EL_ROBLE'),
+('PFVG95', 1910, 'SCANIA', 'EL_ROBLE'),
+('PFVG96', 1911, 'SCANIA', 'EL_ROBLE'),
+('PFVG97', 1715, 'SCANIA', 'EL_ROBLE'),
+('PFVG99', 1717, 'SCANIA', 'EL_ROBLE'),
+('PFVH10', 1882, 'SCANIA', 'EL_ROBLE'),
+('PFVH11', 1883, 'SCANIA', 'EL_ROBLE'),
+('PFVH12', 1718, 'SCANIA', 'EL_ROBLE'),
+('PFVH13', 1719, 'SCANIA', 'EL_ROBLE'),
+('PFVH14', 1884, 'SCANIA', 'EL_ROBLE'),
+('PFVH15', 1720, 'SCANIA', 'EL_ROBLE'),
+('PFYC13', 1721, 'SCANIA', 'EL_ROBLE'),
+('PFYC14', 1722, 'SCANIA', 'EL_ROBLE'),
+('PFYC16', 1723, 'SCANIA', 'EL_ROBLE'),
+('PFYC17', 1724, 'SCANIA', 'EL_ROBLE'),
+('PFYC19', 1725, 'SCANIA', 'EL_ROBLE'),
+('PFYC25', 1727, 'SCANIA', 'EL_ROBLE'),
+('PFYC26', 1728, 'SCANIA', 'EL_ROBLE'),
+('PFYC27', 1729, 'SCANIA', 'EL_ROBLE'),
+('PFYC28', 1730, 'SCANIA', 'EL_ROBLE'),
+('PFYC29', 1731, 'SCANIA', 'EL_ROBLE'),
+('PFYC31', 1732, 'SCANIA', 'EL_ROBLE'),
+('PFYC81', 1759, 'SCANIA', 'EL_ROBLE'),
+('PFYC85', 1761, 'SCANIA', 'EL_ROBLE'),
+('PFYC88', 1914, 'SCANIA', 'EL_ROBLE'),
+('PFYC90', 1915, 'SCANIA', 'EL_ROBLE'),
+('PFZK83', 1762, 'SCANIA', 'EL_ROBLE'),
+('PFZK91', 1927, 'SCANIA', 'EL_ROBLE'),
+('PGBF59', 1928, 'SCANIA', 'EL_ROBLE'),
+('PGBY67', 1916, 'SCANIA', 'EL_ROBLE'),
+('PGBY72', 1929, 'SCANIA', 'EL_ROBLE'),
+('PGBY73', 1930, 'SCANIA', 'EL_ROBLE'),
+('PGBY83', 1774, 'SCANIA', 'EL_ROBLE'),
+('PGKP67', 1781, 'SCANIA', 'EL_ROBLE'),
+('PGLD42', 1782, 'SCANIA', 'EL_ROBLE'),
+('PGLD67', 1917, 'SCANIA', 'EL_ROBLE'),
+('PGRZ67', 1918, 'SCANIA', 'EL_ROBLE'),
+('PGTT95', 1925, 'SCANIA', 'EL_ROBLE'),
+('PGTV12', 1926, 'SCANIA', 'EL_ROBLE'),
+('PGWT98', 1791, 'SCANIA', 'EL_ROBLE'),
+('SHCV78', 911, 'VOLVO', 'EL_ROBLE'),
+('PFYC32', 1733, 'SCANIA', 'EL_ROBLE'),
+('SHCV83', 916, 'VOLVO', 'EL_ROBLE'),
+('PFYC33', 1734, 'SCANIA', 'EL_ROBLE'),
+('PFYC34', 1735, 'SCANIA', 'EL_ROBLE'),
+('PFYC35', 1736, 'SCANIA', 'EL_ROBLE'),
+('PFYC36', 1737, 'SCANIA', 'EL_ROBLE'),
+('PFYC37', 1738, 'SCANIA', 'EL_ROBLE'),
+('PFYC43', 1739, 'SCANIA', 'EL_ROBLE'),
+('PFYC44', 1740, 'SCANIA', 'EL_ROBLE'),
+('PFYC46', 1741, 'SCANIA', 'EL_ROBLE'),
+('PFYC49', 1742, 'SCANIA', 'EL_ROBLE'),
+('PFYC50', 1743, 'SCANIA', 'EL_ROBLE'),
+('PFYC53', 1744, 'SCANIA', 'EL_ROBLE'),
+('PFYC55', 1745, 'SCANIA', 'EL_ROBLE'),
+('PFYC57', 1912, 'SCANIA', 'EL_ROBLE'),
+('PFYC58', 1746, 'SCANIA', 'EL_ROBLE'),
+('PFYC60', 1748, 'SCANIA', 'EL_ROBLE'),
+('PFYC61', 1749, 'SCANIA', 'EL_ROBLE'),
+('PFYC64', 1752, 'SCANIA', 'EL_ROBLE'),
+('PFYC65', 1753, 'SCANIA', 'EL_ROBLE'),
+('PFYC66', 1922, 'SCANIA', 'EL_ROBLE'),
+('PFYC68', 1754, 'SCANIA', 'EL_ROBLE'),
+('PFYC69', 1755, 'SCANIA', 'EL_ROBLE'),
+('PFYC70', 1756, 'SCANIA', 'EL_ROBLE'),
+('PFYC72', 1757, 'SCANIA', 'EL_ROBLE'),
+('PFYC75', 1923, 'SCANIA', 'EL_ROBLE'),
+('PFYC76', 1924, 'SCANIA', 'EL_ROBLE'),
+('PFYC77', 1913, 'SCANIA', 'EL_ROBLE'),
+('PFYC79', 1758, 'SCANIA', 'EL_ROBLE'),
+('PFYC80', 1933, 'SCANIA', 'EL_ROBLE')
+ON CONFLICT (ppu) DO NOTHING;
+
+-- Comentario final
+COMMENT ON TABLE public.fleet_vehicles IS 'Tabla de vehículos de la flota para Estado de Flota y control de limpieza en Aseo';
