@@ -23,6 +23,9 @@ import {
     getWeekStart,
     getReducedHourDays,
     getAdjustedHorario,
+    parseDateToUTC,
+    getDayOfWeekUTC,
+    getWeekInCycle,
 } from '../utils/shiftEngine';
 import { useShiftTypes, useAllSpecialTemplates } from '../hooks';
 
@@ -244,7 +247,27 @@ export const RutPdfExportModal = ({
 
                     if (!isOff) {
                         const isReduced = reducedDays.includes(dateStr);
+                        // Get actual horario from shift pattern if available
                         let horario = selectedStaff.horario || '10:00-20:00';
+
+                        // If has shift, try to get week-specific horario
+                        if (selectedStaff.shift && shiftPattern) {
+                            const date = parseDateToUTC(dateStr);
+                            const dayOfWeek = getDayOfWeekUTC(date);
+
+                            // For rotating shifts, get the week index
+                            if (shiftPattern.type === 'rotating' && shiftPattern.weeks) {
+                                const weekIndex = getWeekInCycle(date, shiftPattern.cycle || 2);
+                                const weekPattern = shiftPattern.weeks[weekIndex];
+
+                                // Get horario for this specific day of week in this week
+                                if (weekPattern?.horarios) {
+                                    const dayHorario = weekPattern.horarios[dayOfWeek];
+                                    if (dayHorario) horario = dayHorario;
+                                }
+                            }
+                        }
+
                         if (isReduced) horario = getAdjustedHorario(horario, true);
                         displayHorario = horario.replace('-', '-');
                     }
@@ -261,8 +284,10 @@ export const RutPdfExportModal = ({
 
                     // Build display stack
                     if (dayChange) {
-                        statusText = `CAMBIO DÍA`;
-                        // Maybe show target? Space is tight.
+                        // Show the target date info for the change
+                        const targetInfo = dayChange.target_date ? ` →  ${new Date(dayChange.target_date).toLocaleDateString('es-CL', { weekday: 'short' })}` : '';
+                        statusText = `CAMBIO DÍA${targetInfo}`;
+                        // Use original day's horario if day change doesn't override
                     } else if (hasLicense) {
                         statusText = 'LICENCIA';
                     } else if (hasVacation) {
