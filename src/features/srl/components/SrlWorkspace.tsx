@@ -1,55 +1,63 @@
+import { useRef, useEffect } from 'react';
 import { Icon } from '../../../shared/components/common/Icon';
 import { RequestForm } from './RequestForm';
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    requestId: string | null; // null = New Request
+    requestId: string | null;
 }
 
 export const SrlWorkspace = ({ isOpen, onClose, requestId }: Props) => {
+    const panelRef = useRef<HTMLDivElement>(null);
+
+    // Close on escape
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        if (isOpen) window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, [isOpen, onClose]);
+
+    if (!isOpen) return null;
+
     return (
-        <>
+        <div className="fixed inset-0 z-50 flex justify-end overflow-hidden" role="dialog" aria-modal="true">
             {/* Backdrop */}
-            {isOpen && (
-                <div
-                    className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm transition-opacity"
-                    onClick={onClose}
-                />
-            )}
+            <div
+                className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in"
+                onClick={onClose}
+            ></div>
 
             {/* Panel */}
             <div
-                className={`
-                    fixed inset-y-0 right-0 z-50 w-full md:w-[800px] bg-white shadow-2xl transform transition-transform duration-300 ease-in-out
-                    ${isOpen ? 'translate-x-0' : 'translate-x-full'}
-                `}
+                ref={panelRef}
+                className="relative w-full max-w-2xl bg-white shadow-2xl h-full flex flex-col animate-in slide-in-from-right duration-300"
             >
-                <div className="h-full flex flex-col">
-                    {/* Header */}
-                    <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                        <div>
-                            <h2 className="text-lg font-bold text-slate-900">
-                                {requestId ? 'Detalle Solicitud' : 'Nueva Solicitud SRL'}
-                            </h2>
-                            <p className="text-xs text-slate-500">
-                                {requestId ? `ID: ${requestId}` : 'Complete el formulario para enviar una solicitud'}
-                            </p>
-                        </div>
-                        <button
-                            onClick={onClose}
-                            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
-                        >
-                            <Icon name="x" size={20} />
-                        </button>
+                {/* Header */}
+                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white/90 backdrop-blur z-10 sticky top-0">
+                    <div>
+                        <h2 className="text-lg font-bold text-slate-900">
+                            {requestId ? 'Detalle de Solicitud' : 'Nueva Solicitud SRL'}
+                        </h2>
+                        <p className="text-sm text-slate-500">
+                            {requestId ? `ID: #${requestId.substring(0, 8)}` : 'Complete los datos para generar un ticket'}
+                        </p>
                     </div>
+                    <button
+                        onClick={onClose}
+                        className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+                    >
+                        <Icon name="x" size={24} />
+                    </button>
+                </div>
 
-                    {/* Content */}
-                    <div className="flex-1 overflow-y-auto p-6">
-                        <RequestForm requestId={requestId} onSuccess={onClose} />
-                    </div>
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+                    <RequestForm requestId={requestId} onSuccess={onClose} />
                 </div>
             </div>
-        </>
+        </div>
     );
 };

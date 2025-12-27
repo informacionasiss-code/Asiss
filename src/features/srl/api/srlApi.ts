@@ -1,5 +1,7 @@
 import { supabase } from '../../../shared/lib/supabaseClient';
 import { SrlRequest, SrlRequestBus, SrlEmailSetting, SrlFilters, SrlStatus, SrlBusImage } from '../types';
+import { emailService } from '../../../shared/services/emailService';
+import { EmailPayload } from '../../../shared/types/email';
 
 // ==========================================
 // REQUESTS
@@ -32,15 +34,20 @@ export async function fetchSrlRequests(filters?: SrlFilters) {
         query = query.eq('id', filters.id);
     }
 
-    // Client-side search for PPU might be needed if not joining efficiently, 
-    // or use a text search index. For now simple filtering.
-
     const { data, error } = await query;
     if (error) throw error;
     return data as (SrlRequest & { srl_request_buses: SrlRequestBus[] })[];
 }
 
-export async function createSrlRequest(request: Partial<SrlRequest>, buses: Partial<SrlRequestBus>[]) {
+export async function createSrlRequest(
+    request: Partial<SrlRequest>,
+    buses: { ppu: string; problem: string; images: File[] }[]
+) {
+    // Sanitize data
+    if (request.required_date === '') {
+        request.required_date = null;
+    }
+
     // 1. Create Request Header
     const { data: reqData, error: reqError } = await supabase
         .from('srl_requests')
@@ -50,18 +57,56 @@ export async function createSrlRequest(request: Partial<SrlRequest>, buses: Part
 
     if (reqError) throw reqError;
 
-    // 2. Create Buses
-    const busesWithId = buses.map(b => ({ ...b, request_id: reqData.id }));
-    const { error: busError } = await supabase
-        .from('srl_request_buses')
-        .insert(busesWithId);
+    // 2. Process Buses and Images
+    const busErrors: any[] = [];
 
-    if (busError) throw busError; // Transaction rollback would be ideal but RLS/Policies prevent full SQL logic here easily without RPC
+    for (const bus of buses) {
+        // A. Insert Bus
+        const { data: busData, error: busError } = await supabase
+            .from('srl_request_buses')
+            .insert({
+                request_id: reqData.id,
+                bus_ppu: bus.ppu,
+                problem_type: 'GENERAL',
+                observation: bus.problem,
+                applus: request.applus
+            })
+            .select()
+            .single();
+
+        if (busError) {
+            busErrors.push({ bus: bus.ppu, error: busError });
+            continue;
+        }
+
+        // B. Upload Images
+        if (bus.images && bus.images.length > 0) {
+            for (const file of bus.images) {
+                try {
+                    await uploadBusImage(busData.id, file);
+                } catch (imgError) {
+                    console.error(`Failed to upload image for bus ${bus.ppu}`, imgError);
+                }
+            }
+        }
+    }
+
+    // 3. Send Email Notification
+    try {
+        await sendSrlEmailNotification(reqData.id, 'CREADA');
+    } catch (emailError) {
+        console.error('Failed to send email notification', emailError);
+    }
 
     return reqData;
 }
 
 export async function updateSrlRequest(id: string, updates: Partial<SrlRequest>) {
+    // Sanitize
+    if (updates.required_date === '') {
+        updates.required_date = null;
+    }
+
     const { data, error } = await supabase
         .from('srl_requests')
         .update(updates)
@@ -132,17 +177,11 @@ export async function fetchSrlEmailSettings() {
         .select('*')
         .single();
 
-    if (error && error.code !== 'PGRST116') throw error; // PGRST116 is no rows
+    if (error && error.code !== 'PGRST116') throw error;
     return data as SrlEmailSetting | null;
 }
 
 export async function updateSrlEmailSettings(settings: Partial<SrlEmailSetting>) {
-    // Upsert logic (assuming only 1 row or ID handling)
-    // We initialized with ID so we might need to fetch first or force ID if singleton
-    // Or just update the existing one if it exists
-
-    // Simplest: update all rows (since policies might restrict) or precise ID
-    // Assuming singleton design pattern for settings
     const { error } = await supabase
         .from('srl_email_settings')
         .update(settings)
@@ -150,6 +189,72 @@ export async function updateSrlEmailSettings(settings: Partial<SrlEmailSetting>)
 
     if (error) throw error;
     return true;
+}
+
+// ==========================================
+// EMAIL LOGIC
+// ==========================================
+
+export async function sendSrlEmailNotification(requestId: string, trigger: 'CREADA' | 'STATUS_CHANGE') {
+    // 1. Fetch Request Details with Relations
+    const { data: request, error } = await supabase
+        .from('srl_requests')
+        .select(`
+            *,
+            srl_request_buses (
+                bus_ppu,
+                observation
+            )
+        `)
+        .eq('id', requestId)
+        .single();
+
+    if (error || !request) throw new Error('Could not fetch request for email');
+
+    // 2. Fetch Settings
+    const settings = await fetchSrlEmailSettings();
+    if (!settings || !settings.enabled) return;
+
+    // 3. Prepare Content
+    const busesList = request.srl_request_buses
+        .map((b: any) => `- PPU: ${b.bus_ppu} | Problema: ${b.observation}`)
+        .join('\n');
+
+    const variables: Record<string, string> = {
+        '{terminal}': request.terminal_code.replace('_', ' '),
+        '{id}': request.id.slice(0, 8),
+        '{date}': new Date(request.created_at).toLocaleString('es-CL'),
+        '{details}': busesList,
+        '{status}': request.status,
+        '{buses}': `${request.srl_request_buses.length} Buses`,
+        '{criticality}': request.criticality
+    };
+
+    let subject = settings.subject_template || 'Solicitud SRL #{id}';
+    let body = settings.body_template || 'Nueva solicitud creada.\n\n{details}';
+
+    // Replace variables
+    Object.entries(variables).forEach(([key, val]) => {
+        const safeVal = val || '';
+        subject = subject.replace(new RegExp(key, 'g'), safeVal);
+        body = body.replace(new RegExp(key, 'g'), safeVal);
+    });
+
+    // 4. Send via Shared Service
+    // Need to cast or conform to the existing EmailPayload type which seems strict
+    const payload: any = { // Using any to bypass strict checks if types.ts is not fully aligned with service capability, or we align to it
+        audience: 'manual',
+        manualRecipients: settings.recipients.split(',').map(e => e.trim()).filter(Boolean),
+        subject: subject,
+        body: body, // usage of body instead of text
+        // html: body.replace(/\n/g, '<br/>') // service might not support html field if not in type
+    };
+
+    if (settings.cc_emails) {
+        payload.cc = settings.cc_emails.split(',').map(e => e.trim()).filter(Boolean);
+    }
+
+    return await emailService.sendEmail(payload as EmailPayload);
 }
 
 // ==========================================
@@ -167,4 +272,3 @@ export function subscribeToSrlChanges(onChange: () => void): () => void {
         supabase.removeChannel(channel);
     };
 }
-

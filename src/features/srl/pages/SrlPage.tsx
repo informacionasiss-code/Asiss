@@ -1,24 +1,20 @@
 import { useState } from 'react';
-import { Icon } from '../../../shared/components/common/Icon';
+import { Icon, IconName } from '../../../shared/components/common/Icon';
 import { RequestsTable } from '../components/RequestsTable';
+import { SrlWorkspace } from '../components/SrlWorkspace';
 import { CalendarView } from '../components/CalendarView';
 import { ReportsView } from '../components/ReportsView';
 import { ConfigView } from '../components/ConfigView';
-import { SrlWorkspace } from '../components/SrlWorkspace';
-import { useSrlRealtime } from '../hooks';
 
-type SrlTab = 'requests' | 'calendar' | 'reports' | 'config';
+type Tab = 'requests' | 'calendar' | 'reports' | 'config';
 
 export const SrlPage = () => {
-    // Enable Realtime updates
-    useSrlRealtime();
-
-    const [activeTab, setActiveTab] = useState<SrlTab>('requests');
+    const [activeTab, setActiveTab] = useState<Tab>('requests');
     const [workspaceOpen, setWorkspaceOpen] = useState(false);
     const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
 
-    const handleOpenWorkspace = (id: string | null) => {
-        setActiveRequestId(id);
+    const handleOpenWorkspace = (requestId?: string) => {
+        setActiveRequestId(requestId || null);
         setWorkspaceOpen(true);
     };
 
@@ -28,60 +24,66 @@ export const SrlPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 p-4 md:p-6 space-y-6">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                        <Icon name="wrench" className="w-8 h-8 text-blue-600" />
-                        Operación SRL
-                    </h1>
-                    <p className="text-slate-500">Gestión de solicitudes y mantenimiento técnico de buses</p>
+        <div className="min-h-screen bg-slate-50/50 pb-20">
+            {/* Enterprise Header */}
+            <header className="bg-white/80 backdrop-blur-md sticky top-0 z-30 border-b border-slate-200 shadow-sm">
+                <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-600 rounded-lg shadow-lg shadow-blue-200">
+                                <Icon name="wrench" className="text-white" size={24} />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Gestión SRL</h1>
+                                <p className="text-xs text-slate-500 font-medium">Sistema de Reparaciones y Logística</p>
+                            </div>
+                        </div>
+
+                        {/* Modern Tab Switcher */}
+                        <nav className="flex items-center gap-1 bg-slate-100/80 p-1.5 rounded-xl overflow-x-auto no-scrollbar">
+                            <TabButton
+                                active={activeTab === 'requests'}
+                                onClick={() => setActiveTab('requests')}
+                                icon="inbox"
+                                label="Solicitudes"
+                            />
+                            <TabButton
+                                active={activeTab === 'calendar'}
+                                onClick={() => setActiveTab('calendar')}
+                                icon="calendar"
+                                label="Calendario"
+                            />
+                            <TabButton
+                                active={activeTab === 'reports'}
+                                onClick={() => setActiveTab('reports')}
+                                icon="bar-chart"
+                                label="Reportes"
+                            />
+                            <TabButton
+                                active={activeTab === 'config'}
+                                onClick={() => setActiveTab('config')}
+                                icon="settings"
+                                label="Configuración"
+                            />
+                        </nav>
+                    </div>
                 </div>
-            </div>
+            </header>
 
-            {/* Navigation Tabs */}
-            <div className="flex overflow-x-auto border-b border-slate-200">
-                <TabButton
-                    active={activeTab === 'requests'}
-                    onClick={() => setActiveTab('requests')}
-                    icon="file"
-                    label="Solicitudes"
-                />
-                <TabButton
-                    active={activeTab === 'calendar'}
-                    onClick={() => setActiveTab('calendar')}
-                    icon="calendar"
-                    label="Calendario Técnico"
-                />
-                <TabButton
-                    active={activeTab === 'reports'}
-                    onClick={() => setActiveTab('reports')}
-                    icon="bar-chart"
-                    label="Reportes"
-                />
-                <TabButton
-                    active={activeTab === 'config'}
-                    onClick={() => setActiveTab('config')}
-                    icon="settings"
-                    label="Configuración"
-                />
-            </div>
-
-            {/* Content Area */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 min-h-[500px] p-4">
+            {/* Main Content Area */}
+            <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                 {activeTab === 'requests' && (
                     <RequestsTable
-                        onCreate={() => handleOpenWorkspace(null)}
+                        onCreate={() => handleOpenWorkspace()}
                         onView={(id) => handleOpenWorkspace(id)}
                     />
                 )}
                 {activeTab === 'calendar' && <CalendarView />}
                 {activeTab === 'reports' && <ReportsView />}
                 {activeTab === 'config' && <ConfigView />}
-            </div>
+            </main>
 
-            {/* Workspace Slide-over */}
+            {/* Workspace Panel (Slide-over) */}
             <SrlWorkspace
                 isOpen={workspaceOpen}
                 onClose={handleCloseWorkspace}
@@ -91,18 +93,18 @@ export const SrlPage = () => {
     );
 };
 
-const TabButton = ({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: string, label: string }) => (
+const TabButton = ({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: IconName, label: string }) => (
     <button
         onClick={onClick}
         className={`
-            flex items-center gap-2 px-6 py-3 border-b-2 transition-colors whitespace-nowrap
+            flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap
             ${active
-                ? 'border-blue-600 text-blue-600 font-medium'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                ? 'bg-white text-blue-700 shadow-sm ring-1 ring-slate-200'
+                : 'text-slate-600 hover:bg-slate-200/50 hover:text-slate-900'
             }
         `}
     >
-        <Icon name={icon as any} className="w-5 h-5" />
+        <Icon name={icon} size={18} className={active ? 'text-blue-600' : 'text-slate-400'} />
         {label}
     </button>
 );

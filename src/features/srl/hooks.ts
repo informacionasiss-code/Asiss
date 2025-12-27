@@ -57,9 +57,10 @@ export const useSrlEmailSettings = () => {
 export const useCreateSrlRequest = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: ({ request, buses }: { request: Partial<SrlRequest>, buses: Partial<SrlRequestBus>[] }) =>
+        mutationFn: ({ request, buses }: { request: Partial<SrlRequest>, buses: { ppu: string; problem: string; images: File[] }[] }) =>
             createSrlRequest(request, buses),
         onSuccess: () => {
+            // ...
             queryClient.invalidateQueries({ queryKey: srlKeys.requests() });
         },
     });
