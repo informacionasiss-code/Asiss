@@ -167,6 +167,30 @@ export async function uploadBusImage(busId: string, file: File) {
     };
 }
 
+/**
+ * Upload technician document to storage
+ */
+export async function uploadTechnicianDocument(
+    requestId: string,
+    file: File
+): Promise<string> {
+    const fileName = `${requestId}_${Date.now()}_${file.name}`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('srl-documents')
+        .upload(fileName, file);
+
+    if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw new Error(`Error al subir documento: ${uploadError.message}`);
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+        .from('srl-documents')
+        .getPublicUrl(uploadData.path);
+
+    return publicUrl;
+}
+
 // ==========================================
 // SETTINGS
 // ==========================================

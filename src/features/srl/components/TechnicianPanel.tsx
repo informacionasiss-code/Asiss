@@ -69,6 +69,14 @@ export const TechnicianPanel = ({
         }
 
         try {
+            let documentUrl: string | undefined;
+
+            // Upload document if provided
+            if (documentFile) {
+                const { uploadTechnicianDocument } = await import('../api/srlApi');
+                documentUrl = await uploadTechnicianDocument(requestId, documentFile);
+            }
+
             await updateMutation.mutateAsync({
                 id: requestId,
                 updates: {
@@ -78,7 +86,8 @@ export const TechnicianPanel = ({
                     technician_visit_at: technicianVisitAt ? new Date(technicianVisitAt).toISOString() : null,
                     result: result,
                     next_visit_at: nextVisitAt ? new Date(nextVisitAt).toISOString() : null,
-                    closed_at: newStatus === 'REPARADA' ? new Date().toISOString() : null
+                    closed_at: newStatus === 'REPARADA' ? new Date().toISOString() : null,
+                    technician_document_url: documentUrl || null
                 }
             });
             alert(`Solicitud marcada como ${newStatus}`);
