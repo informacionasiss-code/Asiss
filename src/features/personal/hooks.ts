@@ -10,6 +10,8 @@ import {
     createStaff,
     updateStaff,
     offboardStaff,
+    suspendStaff,
+    unsuspendStaff,
     createAdmonition,
     subscribeToStaffChanges,
 } from './api';
@@ -108,6 +110,32 @@ export const useOffboardStaff = () => {
     return useMutation({
         mutationFn: ({ id, comment }: { id: string; comment: string }) =>
             offboardStaff(id, comment),
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: staffKeys.lists() });
+            queryClient.invalidateQueries({ queryKey: staffKeys.detail(data.id) });
+            queryClient.invalidateQueries({ queryKey: staffKeys.counts({} as TerminalContext) });
+        },
+    });
+};
+
+export const useSuspendStaff = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: string) => suspendStaff(id),
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: staffKeys.lists() });
+            queryClient.invalidateQueries({ queryKey: staffKeys.detail(data.id) });
+            queryClient.invalidateQueries({ queryKey: staffKeys.counts({} as TerminalContext) });
+        },
+    });
+};
+
+export const useUnsuspendStaff = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: string) => unsuspendStaff(id),
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: staffKeys.lists() });
             queryClient.invalidateQueries({ queryKey: staffKeys.detail(data.id) });

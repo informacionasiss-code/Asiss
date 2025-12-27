@@ -8,13 +8,15 @@ interface Props {
     onEdit: (staff: StaffViewModel) => void;
     onOffboard: (staff: StaffViewModel) => void;
     onAdmonish: (staff: StaffViewModel) => void;
+    onSuspend: (staff: StaffViewModel) => void;
+    onUnsuspend: (staff: StaffViewModel) => void;
 }
 
 const getCargoLabel = (cargo: string): string => {
     return STAFF_CARGOS.find((c) => c.value === cargo)?.label || cargo;
 };
 
-export const StaffTable = ({ staff, onEdit, onOffboard, onAdmonish }: Props) => {
+export const StaffTable = ({ staff, onEdit, onOffboard, onAdmonish, onSuspend, onUnsuspend }: Props) => {
     if (!staff.length) {
         return (
             <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 px-6 py-12 text-center">
@@ -48,16 +50,30 @@ export const StaffTable = ({ staff, onEdit, onOffboard, onAdmonish }: Props) => 
                 <tbody className="table-body">
                     {staff.map((row) => {
                         const isOffboarded = row.status === 'DESVINCULADO';
+                        const isSuspended = row.suspended;
 
                         return (
                             <tr
                                 key={row.id}
-                                className={`table-row ${isOffboarded ? 'bg-danger-50 hover:bg-danger-100' : ''}`}
+                                className={`table-row ${isOffboarded
+                                    ? 'bg-danger-50 hover:bg-danger-100'
+                                    : isSuspended
+                                        ? 'bg-yellow-50/50 text-slate-500'
+                                        : ''
+                                    }`}
                             >
                                 <td className="table-cell font-mono text-sm">{formatRut(row.rut)}</td>
                                 <td className="table-cell">
                                     <div className="flex items-center gap-2">
-                                        <span className="font-medium text-slate-900">{row.nombre}</span>
+                                        <span className={`font-medium ${isSuspended ? 'line-through decoration-slate-400 text-slate-500' : 'text-slate-900'
+                                            }`}>
+                                            {row.nombre}
+                                        </span>
+                                        {isSuspended && (
+                                            <span className="badge badge-warning text-xs" title="Trabajador suspendido temporalmente">
+                                                ⏸️ Suspendido
+                                            </span>
+                                        )}
                                         {row.admonition_count > 0 && (
                                             <span
                                                 className="badge badge-warning text-xs"
@@ -75,10 +91,9 @@ export const StaffTable = ({ staff, onEdit, onOffboard, onAdmonish }: Props) => 
                                 <td className="table-cell text-sm">{row.contacto}</td>
                                 <td className="table-cell">
                                     <span
-                                        className={`badge ${isOffboarded ? 'badge-danger' : 'badge-success'
-                                            }`}
+                                        className={`badge ${isOffboarded ? 'badge-danger' : isSuspended ? 'badge-warning' : 'badge-success'}`}
                                     >
-                                        {row.status}
+                                        {isOffboarded ? 'DESVINCULADO' : isSuspended ? 'SUSPENDIDO' : 'ACTIVO'}
                                     </span>
                                 </td>
                                 <td className="table-cell">
@@ -92,6 +107,23 @@ export const StaffTable = ({ staff, onEdit, onOffboard, onAdmonish }: Props) => 
                                                 >
                                                     <Icon name="clipboard" size={16} />
                                                 </button>
+                                                {!isSuspended ? (
+                                                    <button
+                                                        onClick={() => onSuspend(row)}
+                                                        className="btn btn-ghost btn-icon text-slate-600 hover:text-yellow-600"
+                                                        title="Suspender temporalmente"
+                                                    >
+                                                        <Icon name="x-circle" size={16} />
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => onUnsuspend(row)}
+                                                        className="btn btn-ghost btn-icon text-yellow-600 hover:text-green-600"
+                                                        title="Reactivar"
+                                                    >
+                                                        <Icon name="check-circle" size={16} />
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={() => onAdmonish(row)}
                                                     className="btn btn-ghost btn-icon text-slate-600 hover:text-warning-600"

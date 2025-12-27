@@ -47,6 +47,7 @@ export interface Staff {
   talla_zapato_seguridad: string | null;
   talla_chaleco_reflectante: string | null;
   status: StaffStatus;
+  suspended: boolean;
   terminated_at: string | null;
   termination_comment: string | null;
   created_at: string;
@@ -139,6 +140,9 @@ export interface StaffCountByCargo {
   cargo: StaffCargo;
   count: number;
   max_q: number | null;
+  with_licenses: number;
+  suspended: number;
+  effective_count: number;
 }
 
 export interface StaffCountByTerminal {

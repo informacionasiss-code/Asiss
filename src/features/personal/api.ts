@@ -173,6 +173,30 @@ export const offboardStaff = async (id: string, comment: string): Promise<Staff>
     return data;
 };
 
+export const suspendStaff = async (id: string): Promise<Staff> => {
+    const { data, error } = await supabase
+        .from('staff')
+        .update({ suspended: true })
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
+export const unsuspendStaff = async (id: string): Promise<Staff> => {
+    const { data, error } = await supabase
+        .from('staff')
+        .update({ suspended: false })
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
 // ==========================================
 // STAFF CAPS (Cupos)
 // ==========================================
@@ -198,14 +222,28 @@ export const fetchStaffCounts = async (
 ): Promise<{ byCargo: StaffCountByCargo[]; byTerminal: StaffCountByTerminal[]; total: number }> => {
     const terminals = resolveTerminalsForContext(terminalContext);
 
-    // Fetch active staff counts
+    // Fetch active staff with IDs for license lookup
     const { data: staffData, error: staffError } = await supabase
         .from('staff')
-        .select('cargo, terminal_code')
+        .select('id, cargo, terminal_code, suspended')
         .eq('status', 'ACTIVO')
         .in('terminal_code', terminals);
 
     if (staffError) throw staffError;
+
+    // Get today's date for license check
+    const today = new Date().toISOString().split('T')[0];
+
+    // Fetch active licenses for today
+    const staffIds = (staffData || []).map(s => s.id);
+    const { data: licensesData } = await supabase
+        .from('attendance_licenses')
+        .select('staff_id')
+        .in('staff_id', staffIds)
+        .lte('start_date', today)
+        .gte('end_date', today);
+
+    const staffWithLicenses = new Set((licensesData || []).map(l => l.staff_id));
 
     // Fetch caps for ER_LR
     const { data: capsData } = await supabase
@@ -218,20 +256,34 @@ export const fetchStaffCounts = async (
         capsMap.set(cap.cargo, cap.max_q);
     });
 
-    // Calculate counts by cargo
-    const cargoCountMap = new Map<StaffCargo, number>();
-    STAFF_CARGOS.forEach((c) => cargoCountMap.set(c.value, 0));
+    // Calculate counts by cargo with license and suspension tracking
+    const cargoStats = new Map<StaffCargo, { count: number; withLicenses: number; suspended: number }>();
+    STAFF_CARGOS.forEach((c) => cargoStats.set(c.value, { count: 0, withLicenses: 0, suspended: 0 }));
 
     (staffData || []).forEach((staff) => {
-        const current = cargoCountMap.get(staff.cargo as StaffCargo) || 0;
-        cargoCountMap.set(staff.cargo as StaffCargo, current + 1);
+        const cargo = staff.cargo as StaffCargo;
+        const stats = cargoStats.get(cargo) || { count: 0, withLicenses: 0, suspended: 0 };
+
+        stats.count++;
+        if (staffWithLicenses.has(staff.id)) stats.withLicenses++;
+        if (staff.suspended) stats.suspended++;
+
+        cargoStats.set(cargo, stats);
     });
 
-    const byCargo: StaffCountByCargo[] = STAFF_CARGOS.map((c) => ({
-        cargo: c.value,
-        count: cargoCountMap.get(c.value) || 0,
-        max_q: capsMap.get(c.value) ?? null,
-    }));
+    const byCargo: StaffCountByCargo[] = STAFF_CARGOS.map((c) => {
+        const stats = cargoStats.get(c.value) || { count: 0, withLicenses: 0, suspended: 0 };
+        const effectiveCount = stats.count - stats.withLicenses - stats.suspended;
+
+        return {
+            cargo: c.value,
+            count: stats.count,
+            max_q: capsMap.get(c.value) ?? null,
+            with_licenses: stats.withLicenses,
+            suspended: stats.suspended,
+            effective_count: effectiveCount,
+        };
+    });
 
     // Calculate counts by terminal
     const terminalCountMap = new Map<TerminalCode, number>();

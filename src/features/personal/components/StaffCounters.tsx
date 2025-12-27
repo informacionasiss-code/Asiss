@@ -56,17 +56,18 @@ export const StaffCounters = ({ terminalContext }: Props) => {
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                     {counts.byCargo.map((item) => {
-                        const percentage = item.max_q ? (item.count / item.max_q) * 100 : 0;
-                        const isOverCap = item.max_q && item.count > item.max_q;
-                        const isNearCap = item.max_q && percentage >= 80 && !isOverCap;
+                        const effectiveCount = item.effective_count;
+                        const isOverQ = item.max_q && effectiveCount > item.max_q;
+                        const isAtOrBelowQ = item.max_q && effectiveCount <= item.max_q;
+                        const percentage = item.max_q ? (effectiveCount / item.max_q) * 100 : 0;
 
                         return (
                             <div
                                 key={item.cargo}
-                                className={`card p-4 transition-all ${isOverCap
-                                        ? 'border-danger-300 bg-danger-50'
-                                        : isNearCap
-                                            ? 'border-warning-300 bg-warning-50'
+                                className={`card p-4 transition-all ${isOverQ
+                                        ? 'border-red-300 bg-red-50'
+                                        : isAtOrBelowQ
+                                            ? 'border-green-300 bg-green-50'
                                             : ''
                                     }`}
                             >
@@ -80,23 +81,30 @@ export const StaffCounters = ({ terminalContext }: Props) => {
                                 </div>
                                 <div className="flex items-baseline gap-1">
                                     <span
-                                        className={`text-2xl font-bold ${isOverCap ? 'text-danger-600' : isNearCap ? 'text-warning-600' : 'text-slate-900'
+                                        className={`text-2xl font-bold ${isOverQ ? 'text-red-600' : isAtOrBelowQ ? 'text-green-600' : 'text-slate-900'
                                             }`}
                                     >
-                                        {item.count}
+                                        {effectiveCount}
                                     </span>
                                     {item.max_q && (
                                         <span className="text-sm text-slate-500">/ {item.max_q}</span>
                                     )}
                                 </div>
+                                {/* Mini report */}
+                                <div className="mt-2 text-xs text-slate-600 space-y-0.5">
+                                    <div>Total: {item.count}</div>
+                                    {item.with_licenses > 0 && <div>Con licencia: {item.with_licenses}</div>}
+                                    {item.suspended > 0 && <div>Suspendidos: {item.suspended}</div>}
+                                    {(item.with_licenses > 0 || item.suspended > 0) && (
+                                        <div className="font-semibold pt-0.5 border-t border-slate-200">
+                                            Efectivo: {effectiveCount}
+                                        </div>
+                                    )}
+                                </div>
                                 {item.max_q && (
                                     <div className="mt-2 h-1.5 bg-slate-200 rounded-full overflow-hidden">
                                         <div
-                                            className={`h-full rounded-full transition-all ${isOverCap
-                                                    ? 'bg-danger-500'
-                                                    : isNearCap
-                                                        ? 'bg-warning-500'
-                                                        : 'bg-brand-500'
+                                            className={`h-full rounded-full transition-all ${isOverQ ? 'bg-red-500' : 'bg-green-500'
                                                 }`}
                                             style={{ width: `${Math.min(percentage, 100)}%` }}
                                         />

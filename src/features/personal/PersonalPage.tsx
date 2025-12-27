@@ -23,6 +23,8 @@ import {
   useCreateStaff,
   useUpdateStaff,
   useOffboardStaff,
+  useSuspendStaff,
+  useUnsuspendStaff,
   useCreateAdmonition,
   useStaffRealtime,
 } from './hooks';
@@ -56,6 +58,8 @@ export const PersonalPage = () => {
   const createMutation = useCreateStaff();
   const updateMutation = useUpdateStaff();
   const offboardMutation = useOffboardStaff();
+  const suspendMutation = useSuspendStaff();
+  const unsuspendMutation = useUnsuspendStaff();
   const admonitionMutation = useCreateAdmonition();
 
   // Realtime subscription
@@ -149,6 +153,25 @@ export const PersonalPage = () => {
     }
   };
 
+  const handleSuspend = async (staff: StaffViewModel) => {
+    if (!confirm(`¿Suspender temporalmente a ${staff.nombre}?`)) return;
+    try {
+      await suspendMutation.mutateAsync(staff.id);
+    } catch (error) {
+      console.error('Error suspending staff:', error);
+      alert(error instanceof Error ? error.message : 'Error al suspender trabajador');
+    }
+  };
+
+  const handleUnsuspend = async (staff: StaffViewModel) => {
+    try {
+      await unsuspendMutation.mutateAsync(staff.id);
+    } catch (error) {
+      console.error('Error unsuspending staff:', error);
+      alert(error instanceof Error ? error.message : 'Error al reactivar trabajador');
+    }
+  };
+
   const closeModal = () => setModalState({ type: 'none' });
 
   return (
@@ -236,6 +259,8 @@ export const PersonalPage = () => {
           onEdit={(staff) => setModalState({ type: 'edit', staff })}
           onOffboard={(staff) => setModalState({ type: 'offboard', staff })}
           onAdmonish={(staff) => setModalState({ type: 'admonish', staff })}
+          onSuspend={handleSuspend}
+          onUnsuspend={handleUnsuspend}
         />
       )}
 
