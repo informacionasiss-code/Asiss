@@ -205,7 +205,7 @@ export async function executeVacation(
             calendar_days: 0, // Fallback
             business_days: 0, // Fallback
             note,
-            created_by: createdBy,
+            created_by_supervisor: createdBy,
             auth_status: 'AUTORIZADO', // Auto-approve via command?
         });
 
