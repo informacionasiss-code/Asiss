@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useSrlRequests } from '../hooks';
 import { Icon } from '../../../shared/components/common/Icon';
 import { SrlStatus, SrlCriticality } from '../types';
+import { RequestDetailModal } from './RequestDetailModal';
 
 interface Props {
     onCreate: () => void;
@@ -15,6 +16,7 @@ export const RequestsTable = ({ onCreate, onView }: Props) => {
         criticality: 'TODAS',
         search: ''
     });
+    const [detailModalId, setDetailModalId] = useState<string | null>(null);
 
     const { data: requests = [], isLoading } = useSrlRequests(filters);
 
@@ -195,6 +197,15 @@ export const RequestsTable = ({ onCreate, onView }: Props) => {
                     </div>
                 )}
             </div>
+
+            {/* Detail Modal */}
+            {detailModalId && (
+                <RequestDetailModal
+                    isOpen={!!detailModalId}
+                    onClose={() => setDetailModalId(null)}
+                    requestId={detailModalId}
+                />
+            )}
         </div>
     );
 };

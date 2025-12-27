@@ -12,7 +12,8 @@ ADD COLUMN IF NOT EXISTS technician_visit_at TIMESTAMPTZ,
 ADD COLUMN IF NOT EXISTS technician_message TEXT,
 ADD COLUMN IF NOT EXISTS result TEXT CHECK (result IN ('OPERATIVO', 'NO_OPERATIVO')),
 ADD COLUMN IF NOT EXISTS next_visit_at TIMESTAMPTZ,
-ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;
+ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ,
+ADD COLUMN IF NOT EXISTS technician_document_url TEXT; -- NUEVO: Para guardar el documento técnico
 
 -- PASO 2: Verificar que srl_email_settings tenga updated_at
 ALTER TABLE srl_email_settings 
@@ -27,7 +28,12 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('srl-images', 'srl-images', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
 
--- PASO 5: Eliminar políticas viejas de storage
+-- PASO 5: Crear bucket de storage 'srl-documents' para documentos técnicos
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('srl-documents', 'srl-documents', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- PASO 6: Eliminar políticas viejas de storage
 DO $$ 
 DECLARE r RECORD;
 BEGIN
@@ -37,7 +43,7 @@ BEGIN
     END LOOP;
 END $$;
 
--- PASO 6: Crear políticas PERMISIVAS para storage
+-- PASO 7: Crear políticas PERMISIVAS para storage (srl-images)
 CREATE POLICY "srl_insert_all" 
 ON storage.objects FOR INSERT 
 TO public 
@@ -59,22 +65,44 @@ ON storage.objects FOR DELETE
 TO public 
 USING (bucket_id = 'srl-images');
 
--- PASO 7: Verificación Final
+-- PASO 8: Crear políticas para storage (srl-documents)
+CREATE POLICY "srl_docs_insert_all" 
+ON storage.objects FOR INSERT 
+TO public 
+WITH CHECK (bucket_id = 'srl-documents');
+
+CREATE POLICY "srl_docs_select_all" 
+ON storage.objects FOR SELECT 
+TO public 
+USING (bucket_id = 'srl-documents');
+
+CREATE POLICY "srl_docs_update_all" 
+ON storage.objects FOR UPDATE 
+TO public 
+USING (bucket_id = 'srl-documents')
+WITH CHECK (bucket_id = 'srl-documents');
+
+CREATE POLICY "srl_docs_delete_all" 
+ON storage.objects FOR DELETE 
+TO public 
+USING (bucket_id = 'srl-documents');
+
+-- PASO 9: Verificación Final
 SELECT 
     'srl_requests columns' as check_type,
     column_name, 
     data_type 
 FROM information_schema.columns 
 WHERE table_name = 'srl_requests' 
-  AND column_name IN ('technician_name', 'result', 'closed_at')
+  AND column_name IN ('technician_name', 'result', 'closed_at', 'technician_document_url')
 ORDER BY column_name;
 
 SELECT 
-    'srl-images bucket' as check_type,
+    'storage buckets' as check_type,
     id, 
     name, 
     public 
 FROM storage.buckets 
-WHERE id = 'srl-images';
+WHERE id IN ('srl-images', 'srl-documents');
 
 -- ✅ Si ves resultados en ambas queries, está todo listo
