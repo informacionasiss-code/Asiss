@@ -93,39 +93,24 @@ export interface AttendancePermission {
 }
 
 export interface AttendanceNoMark {
-    id: string;
     rut: string;
     date: string;
-    created_at: string;
 }
 
 export interface AttendanceNoCredential {
-    id: string;
     rut: string;
     date: string;
-    created_at: string;
 }
 
 export interface AttendanceDayChange {
-    id: string;
     rut: string;
-    date: string;       // The day that was originally assigned
-    target_date: string; // The new day worked (or vice versa depending on logic, usually date is the key)
-    original_date: string;
-    new_date: string;
-    reason: string;
-    created_at: string;
+    date: string;
+    target_date?: string; // Optional as API currently only returns 'date'
 }
 
 export interface AttendanceAuthorization {
-    id: string;
     rut: string;
-    date: string; // date of the incident (llegada tarde, etc)
-    type: 'LLEGADA_TARDE' | 'SALIDA_ANTICIPADA';
-    start_time?: string;
-    end_time?: string;
-    reason: string;
-    created_at: string;
+    date: string;
 }
 
 export interface AttendanceIncidences {

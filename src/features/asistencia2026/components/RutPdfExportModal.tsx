@@ -517,7 +517,7 @@ export const RutPdfExportModal = ({
                             </>
                         ) : (
                             <>
-                                <Icon name="printer" size={18} />
+                                <Icon name="download" size={18} />
                                 Generar Documento
                             </>
                         )}
