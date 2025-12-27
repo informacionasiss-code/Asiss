@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { AseoRutLogin } from '../components/AseoRutLogin';
 import { BottomNav } from '../components/BottomNav';
 import { AseoForm } from '../components/AseoForm';
-import { My Records } from '../components/MyRecords';
+import { MyRecords } from '../components/MyRecords';
 import { Tasks } from '../components/Tasks';
 import { Stats } from '../components/Stats';
 import { Notifications } from '../components/Notifications';
@@ -81,8 +81,8 @@ export const AseoMobilePage = () => {
                     <button
                         onClick={() => setActiveTab('form')}
                         className={`flex flex-col items-center justify-center py-2 px-1 transition-all ${activeTab === 'form'
-                                ? 'text-indigo-600 bg-indigo-50'
-                                : 'text-slate-600 hover:bg-slate-50'
+                            ? 'text-indigo-600 bg-indigo-50'
+                            : 'text-slate-600 hover:bg-slate-50'
                             }`}
                     >
                         <Icon name="edit" size={20} />
@@ -91,8 +91,8 @@ export const AseoMobilePage = () => {
                     <button
                         onClick={() => setActiveTab('info')}
                         className={`flex flex-col items-center justify-center py-2 px-1 transition-all ${activeTab === 'info'
-                                ? 'text-indigo-600 bg-indigo-50'
-                                : 'text-slate-600 hover:bg-slate-50'
+                            ? 'text-indigo-600 bg-indigo-50'
+                            : 'text-slate-600 hover:bg-slate-50'
                             }`}
                     >
                         <Icon name="user" size={20} />
@@ -101,8 +101,8 @@ export const AseoMobilePage = () => {
                     <button
                         onClick={() => setActiveTab('records')}
                         className={`flex flex-col items-center justify-center py-2 px-1 transition-all ${activeTab === 'records'
-                                ? 'text-indigo-600 bg-indigo-50'
-                                : 'text-slate-600 hover:bg-slate-50'
+                            ? 'text-indigo-600 bg-indigo-50'
+                            : 'text-slate-600 hover:bg-slate-50'
                             }`}
                     >
                         <Icon name="image" size={20} />
@@ -111,8 +111,8 @@ export const AseoMobilePage = () => {
                     <button
                         onClick={() => setActiveTab('tasks')}
                         className={`flex flex-col items-center justify-center py-2 px-1 transition-all ${activeTab === 'tasks'
-                                ? 'text-indigo-600 bg-indigo-50'
-                                : 'text-slate-600 hover:bg-slate-50'
+                            ? 'text-indigo-600 bg-indigo-50'
+                            : 'text-slate-600 hover:bg-slate-50'
                             }`}
                     >
                         <Icon name="check-circle" size={20} />
@@ -121,8 +121,8 @@ export const AseoMobilePage = () => {
                     <button
                         onClick={() => setActiveTab('stats')}
                         className={`flex flex-col items-center justify-center py-2 px-1 transition-all ${activeTab === 'stats'
-                                ? 'text-indigo-600 bg-indigo-50'
-                                : 'text-slate-600 hover:bg-slate-50'
+                            ? 'text-indigo-600 bg-indigo-50'
+                            : 'text-slate-600 hover:bg-slate-50'
                             }`}
                     >
                         <Icon name="bar-chart" size={20} />
@@ -131,8 +131,8 @@ export const AseoMobilePage = () => {
                     <button
                         onClick={() => setActiveTab('notifications')}
                         className={`relative flex flex-col items-center justify-center py-2 px-1 transition-all ${activeTab === 'notifications'
-                                ? 'text-indigo-600 bg-indigo-50'
-                                : 'text-slate-600 hover:bg-slate-50'
+                            ? 'text-indigo-600 bg-indigo-50'
+                            : 'text-slate-600 hover:bg-slate-50'
                             }`}
                     >
                         {unreadCount > 0 && (
