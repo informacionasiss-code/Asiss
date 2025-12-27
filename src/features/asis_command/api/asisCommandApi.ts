@@ -221,7 +221,7 @@ export async function executeVacation(
             business_days: businessDays,
             note,
             created_by_supervisor: createdBy,
-            auth_status: 'AUTORIZADO',
+            auth_status: 'PENDIENTE',
         });
 
     if (error) {
@@ -232,14 +232,13 @@ export async function executeVacation(
     try {
         await emailService.sendEmail({
             audience: 'manual',
-            manualRecipients: ['rrhh@informacionasiss.cl'], // Default HR email
-            subject: `Vacaciones Asignadas - ${staff.nombre}`,
-            body: `Se han registrado vacaciones para:\n\nNombre: ${staff.nombre}\nRUT: ${staff.rut}\nCargo: ${staff.cargo}\nTerminal: ${staff.terminal_code}\n\nDesde: ${startDate}\nHasta: ${endDate}\nDías Hábiles: ${businessDays}\nDías Corridos: ${calendarDays}\n\nNota: ${note}\n\nRegistrado por: ${createdBy}\nSistema Asis Command`,
+            manualRecipients: ['rrhh@informacionasiss.cl'],
+            subject: `Solicitud de Vacaciones - ${staff.nombre}`,
+            body: `Se ha generado una SOLICITUD DE VACACIONES:\n\nNombre: ${staff.nombre}\nRUT: ${staff.rut}\nCargo: ${staff.cargo}\nTerminal: ${staff.terminal_code}\n\nDesde: ${startDate}\nHasta: ${endDate}\nDías Hábiles: ${businessDays}\nDías Corridos: ${calendarDays}\n\nNota: ${note}\n\nSolicitado por: ${createdBy}\nEstado: PENDIENTE DE APROBACIÓN\n\nSistema Asis Command`,
             module: 'asistencia',
         });
     } catch (emailErr) {
         console.error('Error sending vacation email:', emailErr);
-        // Don't fail the command if email fails, but log it
     }
 
     return { success: true };
