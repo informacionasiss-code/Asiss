@@ -215,6 +215,31 @@ export async function fetchSpecialTemplate(
     }
 }
 
+/**
+ * Fetch all special templates for staff with ESPECIAL shift type
+ */
+export async function fetchAllSpecialTemplates(
+    staffIds: string[]
+): Promise<StaffShiftSpecialTemplate[]> {
+    if (!isSupabaseConfigured() || staffIds.length === 0) return [];
+
+    try {
+        const { data, error } = await supabase
+            .from('staff_shift_special_templates')
+            .select('*')
+            .in('staff_id', staffIds);
+
+        if (error) {
+            console.warn('fetchAllSpecialTemplates error (ignoring):', error.message);
+            return [];
+        }
+        return data || [];
+    } catch (err) {
+        console.warn('fetchAllSpecialTemplates exception (ignoring):', err);
+        return [];
+    }
+}
+
 export async function upsertSpecialTemplate(
     staffId: string,
     offDays: number[]

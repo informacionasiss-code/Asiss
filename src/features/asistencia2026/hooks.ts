@@ -12,6 +12,7 @@ import {
     fetchStaffShift,
     upsertStaffShift,
     fetchSpecialTemplate,
+    fetchAllSpecialTemplates,
     upsertSpecialTemplate,
     fetchOverridesForMonth,
     fetchMarksForMonth,
@@ -93,6 +94,14 @@ export const useSpecialTemplate = (staffId: string | null) => {
         queryKey: asistencia2026Keys.specialTemplate(staffId || ''),
         queryFn: () => staffId ? fetchSpecialTemplate(staffId) : null,
         enabled: Boolean(staffId),
+    });
+};
+
+export const useAllSpecialTemplates = (staffIds: string[]) => {
+    return useQuery({
+        queryKey: ['asistencia2026', 'specialTemplates', 'all', staffIds.join(',')],
+        queryFn: () => fetchAllSpecialTemplates(staffIds),
+        enabled: staffIds.length > 0,
     });
 };
 

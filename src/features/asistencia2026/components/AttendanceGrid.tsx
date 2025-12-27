@@ -16,6 +16,7 @@ import {
     ShiftType,
     ShiftTypeCode,
     StaffShiftOverride,
+    StaffShiftSpecialTemplate,
     IncidenceCode,
     CARGO_ORDER,
 } from '../types';
@@ -112,6 +113,7 @@ interface AttendanceGridProps {
     vacations: { staff_id: string; start_date: string; end_date: string }[];
     overrides: StaffShiftOverride[];
     incidences: IncidenceMap;
+    specialTemplates: StaffShiftSpecialTemplate[];
     weekDates: string[];
     isLoading?: boolean;
     onRequestOffboarding?: (staff: StaffWithShift) => void;
@@ -127,6 +129,7 @@ export const AttendanceGrid = ({
     vacations,
     overrides,
     incidences,
+    specialTemplates,
     weekDates,
     isLoading = false,
     onRequestOffboarding,
@@ -182,6 +185,15 @@ export const AttendanceGrid = ({
         }
         return map;
     }, [shiftTypes]);
+
+    // Build special templates map for ESPECIAL (manual) shift types
+    const specialTemplatesMap = useMemo(() => {
+        const map = new Map<string, StaffShiftSpecialTemplate>();
+        for (const t of specialTemplates) {
+            map.set(t.staff_id, t);
+        }
+        return map;
+    }, [specialTemplates]);
 
     const overridesMap = useMemo(() => {
         const map = new Map<string, StaffShiftOverride>();
@@ -247,7 +259,9 @@ export const AttendanceGrid = ({
             }
 
             if (shiftType?.pattern_json) {
-                isOff = isOffDay(date, s.shift.shift_type_code, s.shift.variant_code, shiftType.pattern_json, undefined, override);
+                // Get special template for manual (ESPECIAL) shift types
+                const specialTemplate = specialTemplatesMap.get(s.id);
+                isOff = isOffDay(date, s.shift.shift_type_code, s.shift.variant_code, shiftType.pattern_json, specialTemplate, override);
 
                 // Debug log for first date only (to avoid spam)
                 if (date === weekDates[0]) {

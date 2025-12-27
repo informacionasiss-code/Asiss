@@ -18,6 +18,7 @@ import {
     useVacationsForMonth,
     useOverridesForMonth,
     useIncidencesForMonth,
+    useAllSpecialTemplates,
     useCreateOffboardingRequest,
     useAsistencia2026Realtime,
 } from '../hooks';
@@ -95,6 +96,7 @@ export const Asistencia2026Page = () => {
     const { data: vacations = [], isLoading: loadingVacations } = useVacationsForMonth(staffIds, year, month);
     const { data: overrides = [], isLoading: loadingOverrides } = useOverridesForMonth(staffIds, year, month);
     const { data: incidences, isLoading: loadingIncidences } = useIncidencesForMonth(terminalContext, year, month);
+    const { data: specialTemplates = [] } = useAllSpecialTemplates(staffIds);
 
     const offboardingMutation = useCreateOffboardingRequest();
 
@@ -511,6 +513,7 @@ export const Asistencia2026Page = () => {
                 vacations={vacations}
                 overrides={overrides}
                 incidences={incidences || { noMarcaciones: [], sinCredenciales: [], cambiosDia: [], autorizaciones: [] }}
+                specialTemplates={specialTemplates}
                 weekDates={weekDates}
                 isLoading={isLoading}
                 onRequestOffboarding={(s) => setOffboardingStaff(s)}
