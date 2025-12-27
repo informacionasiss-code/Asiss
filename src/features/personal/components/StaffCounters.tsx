@@ -65,10 +65,10 @@ export const StaffCounters = ({ terminalContext }: Props) => {
                             <div
                                 key={item.cargo}
                                 className={`card p-4 transition-all ${isOverQ
-                                        ? 'border-red-300 bg-red-50'
-                                        : isAtOrBelowQ
-                                            ? 'border-green-300 bg-green-50'
-                                            : ''
+                                    ? 'border-red-300 bg-red-50'
+                                    : isAtOrBelowQ
+                                        ? 'border-green-300 bg-green-50'
+                                        : ''
                                     }`}
                             >
                                 <div className="flex items-center gap-2 mb-2">
@@ -90,17 +90,16 @@ export const StaffCounters = ({ terminalContext }: Props) => {
                                         <span className="text-sm text-slate-500">/ {item.max_q}</span>
                                     )}
                                 </div>
-                                {/* Mini report */}
-                                <div className="mt-2 text-xs text-slate-600 space-y-0.5">
-                                    <div>Total: {item.count}</div>
-                                    {item.with_licenses > 0 && <div>Con licencia: {item.with_licenses}</div>}
-                                    {item.suspended > 0 && <div>Suspendidos: {item.suspended}</div>}
-                                    {(item.with_licenses > 0 || item.suspended > 0) && (
+                                {/* Simplified mini report - only show if there are suspended */}
+                                {item.suspended > 0 && (
+                                    <div className="mt-2 text-xs text-slate-600 space-y-0.5">
+                                        <div>Total: {item.count}</div>
+                                        <div>Suspendidos: {item.suspended}</div>
                                         <div className="font-semibold pt-0.5 border-t border-slate-200">
                                             Efectivo: {effectiveCount}
                                         </div>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
                                 {item.max_q && (
                                     <div className="mt-2 h-1.5 bg-slate-200 rounded-full overflow-hidden">
                                         <div

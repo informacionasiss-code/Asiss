@@ -273,7 +273,8 @@ export const fetchStaffCounts = async (
 
     const byCargo: StaffCountByCargo[] = STAFF_CARGOS.map((c) => {
         const stats = cargoStats.get(c.value) || { count: 0, withLicenses: 0, suspended: 0 };
-        const effectiveCount = stats.count - stats.withLicenses - stats.suspended;
+        // ONLY subtract suspended, NOT licenses - licenses are tracked for info only
+        const effectiveCount = stats.count - stats.suspended;
 
         return {
             cargo: c.value,
