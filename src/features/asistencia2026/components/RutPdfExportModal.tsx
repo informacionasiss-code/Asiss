@@ -227,9 +227,9 @@ export const RutPdfExportModal = ({
                     // 1. Core Shift Logic (Always calc shift first)
                     let isOff = false;
                     let displayHorario = '';
+                    const shiftPattern = shiftType?.pattern_json; // Define at this level for reuse
 
                     if (selectedStaff.shift) {
-                        const shiftPattern = shiftType?.pattern_json;
                         if (shiftPattern) {
                             const specialTemplate = specialTemplatesMap.get(selectedStaff.id);
                             isOff = isOffDay(

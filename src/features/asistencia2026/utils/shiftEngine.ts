@@ -19,7 +19,7 @@ const CYCLE_REFERENCE_DATE = new Date(Date.UTC(2025, 11, 29, 12, 0, 0)); // Dec 
 /**
  * Get the number of days between two dates (using UTC to avoid TZ issues)
  */
-function daysBetween(date1: Date, date2: Date): number {
+export function daysBetween(date1: Date, date2: Date): number {
     const utc1 = Date.UTC(date1.getUTCFullYear(), date1.getUTCMonth(), date1.getUTCDate());
     const utc2 = Date.UTC(date2.getUTCFullYear(), date2.getUTCMonth(), date2.getUTCDate());
     return Math.floor((utc2 - utc1) / (1000 * 60 * 60 * 24));
@@ -28,7 +28,7 @@ function daysBetween(date1: Date, date2: Date): number {
 /**
  * Parse a date string (YYYY-MM-DD) to UTC noon to avoid TZ issues
  */
-function parseDateToUTC(dateStr: string): Date {
+export function parseDateToUTC(dateStr: string): Date {
     const [year, month, day] = dateStr.split('-').map(Number);
     return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
 }
@@ -36,7 +36,7 @@ function parseDateToUTC(dateStr: string): Date {
 /**
  * Get the week number in cycle (0-indexed)
  */
-function getWeekInCycle(date: Date, cycleWeeks: number): number {
+export function getWeekInCycle(date: Date, cycleWeeks: number): number {
     const days = daysBetween(CYCLE_REFERENCE_DATE, date);
     const weeks = Math.floor(days / 7);
     return ((weeks % cycleWeeks) + cycleWeeks) % cycleWeeks; // Handle negative modulo
@@ -45,7 +45,7 @@ function getWeekInCycle(date: Date, cycleWeeks: number): number {
 /**
  * Get day of week from UTC date (0 = Sunday, 6 = Saturday)
  */
-function getDayOfWeekUTC(date: Date): number {
+export function getDayOfWeekUTC(date: Date): number {
     return date.getUTCDay();
 }
 
