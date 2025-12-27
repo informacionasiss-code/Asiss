@@ -293,7 +293,7 @@ export const RutPdfExportModal = ({
 
             // Footer
             doc.setFontSize(7);
-            doc.text(`Generado: ${new Date().toLocaleString('es-CL')} | Ley 40 Horas: 43 hrs/semana en 2026 (2 días reducidos: Mar y Jue)`, margin, pageHeight - 8);
+            doc.text(`Generado: ${new Date().toLocaleString('es-CL')} | Ley 40 Horas: 43 hrs/semana en 2026 (2 días reducidos: Lun y Mar)`, margin, pageHeight - 8);
 
             // Save
             const fileName = `Horario_${selectedStaff.rut.replace(/\./g, '')}_${months[selectedMonth]}_${selectedYear}.pdf`;
@@ -392,7 +392,7 @@ export const RutPdfExportModal = ({
                             <div>
                                 <div className="text-sm font-medium text-amber-800">Ley 40 Horas</div>
                                 <div className="text-xs text-amber-700">
-                                    En 2026: 43 hrs/semana. Los martes y jueves tienen -1 hora (indicados con *).
+                                    En 2026: 43 hrs/semana. Los lunes y martes tienen -1 hora (indicados con *).
                                 </div>
                             </div>
                         </div>

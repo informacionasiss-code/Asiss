@@ -279,12 +279,13 @@ export function formatWeekRange(weekStartDate: string): string {
 /**
  * Get reduced hour days for Ley 40 horas
  * In 2026: 43 hours/week = need to reduce 2 days per week by 1 hour each
- * Strategy: Tuesday and Thursday are reduced days (middle of work week)
+ * Strategy: Monday and Tuesday are reduced days (start of work week)
+ * This avoids overlap with common off days (Wed, Thu, Fri, Sat, Sun)
  */
 export function getReducedHourDays(weekStartDate: string): string[] {
     const dates = getWeekDates(weekStartDate);
-    // Tuesday (index 1) and Thursday (index 3) are reduced days
-    return [dates[1], dates[3]];
+    // Monday (index 0) and Tuesday (index 1) are reduced days
+    return [dates[0], dates[1]];
 }
 
 /**
