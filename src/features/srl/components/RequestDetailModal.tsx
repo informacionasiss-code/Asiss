@@ -325,7 +325,7 @@ const BusDetailCard = ({ bus }: { bus: any }) => {
                 </div>
                 {bus.applus && (
                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">
-                        <Icon name="zap" size={12} />
+                        <Icon name="alert-circle" size={12} />
                         APPLUS
                     </span>
                 )}

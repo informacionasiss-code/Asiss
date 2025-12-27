@@ -247,30 +247,13 @@ export const RutPdfExportModal = ({
 
                     if (!isOff) {
                         const isReduced = reducedDays.includes(dateStr);
-                        // Get actual horario from shift pattern if available
+                        // Use base horario (week-specific scheduling not implemented in pattern yet)
                         let horario = selectedStaff.horario || '10:00-20:00';
-
-                        // If has shift, try to get week-specific horario
-                        if (selectedStaff.shift && shiftPattern) {
-                            const date = parseDateToUTC(dateStr);
-                            const dayOfWeek = getDayOfWeekUTC(date);
-
-                            // For rotating shifts, get the week index
-                            if (shiftPattern.type === 'rotating' && shiftPattern.weeks) {
-                                const weekIndex = getWeekInCycle(date, shiftPattern.cycle || 2);
-                                const weekPattern = shiftPattern.weeks[weekIndex];
-
-                                // Get horario for this specific day of week in this week
-                                if (weekPattern?.horarios) {
-                                    const dayHorario = weekPattern.horarios[dayOfWeek];
-                                    if (dayHorario) horario = dayHorario;
-                                }
-                            }
-                        }
 
                         if (isReduced) horario = getAdjustedHorario(horario, true);
                         displayHorario = horario.replace('-', '-');
                     }
+
 
                     // 2. Incident/Status Overrides
                     const dayChange = incidentsMap.dayChange.get(dateStr);

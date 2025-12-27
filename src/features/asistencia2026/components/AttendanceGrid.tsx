@@ -226,7 +226,10 @@ export const AttendanceGrid = ({
         const codes: IncidenceCode[] = [];
         if (incidences.noMarcaciones.some((i) => i.rut === rut && i.date === date)) codes.push('NM');
         if (incidences.sinCredenciales.some((i) => i.rut === rut && i.date === date)) codes.push('NC');
-        if (incidences.cambiosDia.some((i) => i.rut === rut && i.date === date)) codes.push('CD');
+        if (incidences.cambiosDia.some((i) => i.rut === rut && i.date === date)) {
+            codes.push('CD');
+            console.log('🔄 CAMBIO DÍA detectado:', rut, date);
+        }
         if (incidences.autorizaciones.some((i) => i.rut === rut && i.date === date)) codes.push('AUT');
         return codes;
     };
