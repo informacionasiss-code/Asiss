@@ -1165,14 +1165,14 @@ INSERT INTO shift_types (code, name, pattern_json) VALUES
   }'::jsonb),
   ('SUPERVISOR_RELEVO', 'Supervisor Relevo', '{
     "type": "rotating",
-    "description": "Cubre supervisores día/noche. Sem 1: 2 libres, Sem 2: 3 libres (Jue-Vie-Sab)",
+    "description": "Cubre supervisores. Sem1: 2 libres (Mié+Dom). Sem2: 3 libres (Mié+Vie+Sáb). Respeta descanso post-noche.",
     "cycle": 2,
     "weeks": [
-      {"offDays": [0, 3]},
-      {"offDays": [4, 5, 6]}
+      {"offDays": [3, 0], "note": "Semana 1: Mié libre (post-noche Mar), Dom libre"},
+      {"offDays": [3, 5, 6], "note": "Semana 2: Mié+Vie+Sáb libres (3 días)"}
     ],
     "coversBoth": true,
-    "noDoubleShift": true
+    "noNightThenDay": true
   }'::jsonb)
 ON CONFLICT (code) DO NOTHING;
 

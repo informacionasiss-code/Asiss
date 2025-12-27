@@ -87,9 +87,9 @@ function getFallbackShiftType(code: ShiftTypeCode): ShiftType | undefined {
             name: 'Supervisor Relevo',
             pattern_json: {
                 type: 'rotating',
-                description: 'Sem 1: 2 libres, Sem 2: 3 libres',
+                description: 'Sem1: Mié+Dom (2 libres), Sem2: Mié+Vie+Sáb (3 libres)',
                 cycle: 2,
-                weeks: [{ offDays: [0, 3] }, { offDays: [4, 5, 6] }],
+                weeks: [{ offDays: [3, 0] }, { offDays: [3, 5, 6] }],
             },
             created_at: '',
         },
