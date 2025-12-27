@@ -531,6 +531,7 @@ export const Asistencia2026Page = () => {
                 licenses={licenses}
                 permissions={permissions}
                 vacations={vacations}
+                incidences={incidences || { noMarcaciones: [], sinCredenciales: [], cambiosDia: [], autorizaciones: [] }}
                 year={year}
                 month={month}
             />
