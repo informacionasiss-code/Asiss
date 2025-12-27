@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Icon } from '../../../shared/components/common/Icon';
 import { useCreateSrlRequest, useUpdateSrlRequest, useSrlRequests } from '../hooks';
-import { SrlStatus, SrlCriticality, TerminalCode } from '../types';
+import { SrlStatus, SrlCriticality } from '../types';
+import { TerminalCode } from '../../../shared/types/terminal';
 import { useSessionStore } from '../../../shared/state/sessionStore';
 import { BusBlock } from './BusBlock';
 
