@@ -178,14 +178,35 @@ export async function executeVacation(
 ): Promise<{ success: boolean; error?: string }> {
     if (!isSupabaseConfigured()) return { success: false, error: 'Supabase no configurado' };
 
+    // 1. Fetch staff details to populate required fields
+    const { data: staff, error: staffError } = await supabase
+        .from('staff')
+        .select('*')
+        .eq('id', staffId)
+        .single();
+
+    if (staffError || !staff) {
+        return { success: false, error: 'Personal no encontrado' };
+    }
+
+    // 2. Insert vacation record
     const { error } = await supabase
         .from('attendance_vacaciones')
         .insert({
             staff_id: staffId,
+            rut: staff.rut,
+            nombre: staff.nombre,
+            cargo: staff.cargo,
+            terminal_code: staff.terminal_code,
+            turno: staff.turno || 'DIA',
             start_date: startDate,
             end_date: endDate,
+            return_date: endDate, // Fallback
+            calendar_days: 0, // Fallback
+            business_days: 0, // Fallback
             note,
             created_by: createdBy,
+            auth_status: 'AUTORIZADO', // Auto-approve via command?
         });
 
     if (error) {
