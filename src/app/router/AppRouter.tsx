@@ -9,9 +9,11 @@ import { ReunionesPage } from '../../features/reuniones/ReunionesPage';
 import { TareasPage } from '../../features/tareas/TareasPage';
 import { InformativosPage } from '../../features/informativos/InformativosPage';
 import { AsistenciaPage } from '../../features/asistencia/AsistenciaPage';
+/* Old aseo sections - disabled for new mobile portal
 import { AseoInteriorPage } from '../../features/aseo/sections/AseoInteriorPage';
 import { AseoExteriorPage } from '../../features/aseo/sections/AseoExteriorPage';
 import { AseoRodilloPage } from '../../features/aseo/sections/AseoRodilloPage';
+*/
 import { CredencialesRespaldoPage } from '../../features/credenciales_respaldo/CredencialesRespaldoPage';
 import { SolicitudesPage } from '../../features/solicitudes/SolicitudesPage';
 import { MiniCheckExtintorPage } from '../../features/minicheck/sections/MiniCheckExtintorPage';
@@ -22,6 +24,7 @@ import { MiniCheckPublicidadPage } from '../../features/minicheck/sections/MiniC
 import { EstadoFlotaPage } from '../../features/estado-flota/EstadoFlotaPage';
 import { SolicitudesInsumosPage } from '../../features/solicitudes_insumos/SolicitudesInsumosPage';
 import { SrlPage } from '../../features/srl/pages/SrlPage';
+import { AseoMobilePage } from '../../features/aseo/pages/AseoMobilePage';
 
 const RequireSession = () => {
   const session = useSessionStore((state) => state.session);
@@ -54,9 +57,11 @@ export const AppRouter = () => (
           <Route path="/tareas" element={<TareasPage />} />
           <Route path="/informativos" element={<InformativosPage />} />
           <Route path="/asistencia" element={<AsistenciaPage />} />
+          {/* Old aseo sections - disabled for new mobile portal
           <Route path="/aseo/interior" element={<AseoInteriorPage />} />
           <Route path="/aseo/exterior" element={<AseoExteriorPage />} />
           <Route path="/aseo/rodillo" element={<AseoRodilloPage />} />
+          */}
           <Route path="/credenciales" element={<CredencialesRespaldoPage />} />
           <Route path="/solicitudes" element={<SolicitudesPage />} />
           <Route path="/minicheck/extintor" element={<MiniCheckExtintorPage />} />
@@ -69,6 +74,8 @@ export const AppRouter = () => (
           <Route path="/srl" element={<SrlPage />} />
         </Route>
       </Route>
+      {/* Isolated Aseo Mobile Portal */}
+      <Route path="/aseo" element={<AseoMobilePage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   </HashRouter>
