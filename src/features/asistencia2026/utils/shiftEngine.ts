@@ -173,19 +173,28 @@ export function formatDayOfWeek(dateStr: string): string {
 }
 
 /**
- * Check if a date is today
+ * Get generic local date YYYY-MM-DD
  */
-export function isToday(dateStr: string): boolean {
-    const today = new Date().toISOString().split('T')[0];
-    return dateStr === today;
+export function getLocalTodayStr(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 /**
- * Check if a date is in the past
+ * Check if a date is today (Local Time)
+ */
+export function isToday(dateStr: string): boolean {
+    return dateStr === getLocalTodayStr();
+}
+
+/**
+ * Check if a date is in the past (Local Time)
  */
 export function isPastDate(dateStr: string): boolean {
-    const today = new Date().toISOString().split('T')[0];
-    return dateStr < today;
+    return dateStr < getLocalTodayStr();
 }
 
 /**

@@ -37,6 +37,7 @@ import {
     formatWeekRange,
     getTurnoFromHorario,
     isPastDate,
+    getLocalTodayStr,
 } from '../utils/shiftEngine';
 import { GridFilters, StaffWithShift, Asistencia2026KPIs } from '../types';
 import * as XLSX from 'xlsx';
@@ -60,7 +61,7 @@ export const Asistencia2026Page = () => {
     const session = useSessionStore((s) => s.session);
 
     // Week navigation - start with current week
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalTodayStr();
     const [weekStart, setWeekStart] = useState(() => getWeekStart(today));
     const weekDates = useMemo(() => getWeekDates(weekStart), [weekStart]);
 
@@ -111,7 +112,7 @@ export const Asistencia2026Page = () => {
         let programmmedDay = 0, programmedNight = 0;
         let onLicense = 0, onVacation = 0, onPermission = 0, withIncidencies = 0, pendingMarks = 0;
 
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = getLocalTodayStr();
         const activeIncidenceRuts = new Set<string>();
 
         if (incidences) {
