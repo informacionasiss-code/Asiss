@@ -1,6 +1,8 @@
 import { useRef, useEffect } from 'react';
 import { Icon } from '../../../shared/components/common/Icon';
 import { RequestForm } from './RequestForm';
+import { TechnicianPanel } from './TechnicianPanel';
+import { useSrlRequests } from '../hooks';
 
 interface Props {
     isOpen: boolean;
@@ -10,6 +12,10 @@ interface Props {
 
 export const SrlWorkspace = ({ isOpen, onClose, requestId }: Props) => {
     const panelRef = useRef<HTMLDivElement>(null);
+
+    // Fetch request data if in edit mode
+    const { data: requests } = useSrlRequests(requestId ? { id: requestId, terminal: 'ALL', status: 'TODOS', criticality: 'TODAS', search: '' } : undefined);
+    const requestData = requests?.[0];
 
     // Close on escape
     useEffect(() => {
@@ -33,7 +39,7 @@ export const SrlWorkspace = ({ isOpen, onClose, requestId }: Props) => {
             {/* Panel */}
             <div
                 ref={panelRef}
-                className="relative w-full max-w-2xl bg-white shadow-2xl h-full flex flex-col animate-in slide-in-from-right duration-300"
+                className="relative w-full max-w-3xl bg-white shadow-2xl h-full flex flex-col animate-in slide-in-from-right duration-300"
             >
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white/90 backdrop-blur z-10 sticky top-0">
@@ -54,8 +60,21 @@ export const SrlWorkspace = ({ isOpen, onClose, requestId }: Props) => {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+                <div className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-6">
                     <RequestForm requestId={requestId} onSuccess={onClose} />
+
+                    {/* Show TechnicianPanel ONLY when viewing existing request */}
+                    {requestId && requestData && (
+                        <TechnicianPanel
+                            requestId={requestId}
+                            currentStatus={requestData.status}
+                            technicianName={requestData.technician_name || undefined}
+                            technicianMessage={requestData.technician_message || undefined}
+                            technicianVisitAt={requestData.technician_visit_at || undefined}
+                            result={requestData.result as any}
+                            nextVisitAt={requestData.next_visit_at || undefined}
+                        />
+                    )}
                 </div>
             </div>
         </div>
