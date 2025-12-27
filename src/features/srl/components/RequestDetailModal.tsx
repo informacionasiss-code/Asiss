@@ -77,7 +77,7 @@ export const RequestDetailModal = ({ isOpen, onClose, requestId }: Props) => {
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
 
             {/* Modal */}
-            <div className="relative bg-white rounded-2xl shadow-2xl max-w-6xl w-full my-8 animate-in zoom-in-95 duration-300">
+            <div className="relative bg-white rounded-2xl shadow-2xl max-w-7xl w-full my-8 animate-in zoom-in-95 duration-300">
                 {/* Header */}
                 <div className="bg-gradient-to-r from-slate-800 to-slate-900 px-8 py-6 rounded-t-2xl">
                     <div className="flex items-start justify-between">
@@ -314,15 +314,21 @@ const BusDetailCard = ({ bus }: { bus: any }) => {
     return (
         <div className="bg-white border-2 border-slate-200 rounded-xl p-6 hover:border-blue-300 transition-all">
             <div className="flex items-start justify-between mb-4">
-                <div>
-                    <h4 className="text-xl font-black text-slate-900 mb-1">{bus.bus_ppu}</h4>
-                    <p className="text-sm text-slate-600">{bus.observation || bus.problem_type || 'Sin detalles'}</p>
-                    {bus.applus && (
-                        <span className="inline-block mt-2 px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">
-                            Requiere APPLUS
-                        </span>
-                    )}
+                <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                        <Icon name="truck" size={20} className="text-white" />
+                    </div>
+                    <div>
+                        <h4 className="text-xl font-black text-slate-900">{bus.bus_ppu}</h4>
+                        <p className="text-sm text-slate-600">{bus.observation || bus.problem_type || 'Sin detalles'}</p>
+                    </div>
                 </div>
+                {bus.applus && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">
+                        <Icon name="zap" size={12} />
+                        APPLUS
+                    </span>
+                )}
             </div>
 
             {/* Images Gallery */}
@@ -332,7 +338,7 @@ const BusDetailCard = ({ bus }: { bus: any }) => {
                         <Icon name="image" size={16} />
                         Evidencia Fotográfica ({images.length})
                     </h5>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
                         {images.map((img: any) => (
                             <a
                                 key={img.id}

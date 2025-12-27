@@ -157,23 +157,25 @@ export const RequestsTable = ({ onCreate, onView }: Props) => {
                                             {getCriticalityBadge(req.criticality)}
                                         </td>
                                         <td className="px-6 py-5">
-                                            <div className="flex items-center gap-2">
-                                                <div className="flex -space-x-2">
-                                                    {req.srl_request_buses?.slice(0, 3).map((bus, i) => (
-                                                        <div
-                                                            key={i}
-                                                            className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 border-2 border-white flex items-center justify-center text-[10px] font-black text-white shadow-md"
-                                                            title={bus.bus_ppu}
-                                                        >
-                                                            {bus.bus_ppu.slice(0, 2)}
-                                                        </div>
-                                                    ))}
-                                                    {(req.srl_request_buses?.length || 0) > 3 && (
-                                                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 border-2 border-white flex items-center justify-center text-[10px] font-black text-white shadow-md">
-                                                            +{(req.srl_request_buses?.length || 0) - 3}
-                                                        </div>
-                                                    )}
-                                                </div>
+                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                {req.srl_request_buses?.slice(0, 3).map((bus, i) => (
+                                                    <span
+                                                        key={i}
+                                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-bold shadow-sm"
+                                                        title={`${bus.bus_ppu}${bus.observation ? ` - ${bus.observation}` : ''}`}
+                                                    >
+                                                        <Icon name="truck" size={11} />
+                                                        {bus.bus_ppu}
+                                                    </span>
+                                                ))}
+                                                {(req.srl_request_buses?.length || 0) > 3 && (
+                                                    <span
+                                                        className="inline-flex items-center px-2 py-1 rounded-md bg-slate-500 text-white text-xs font-bold shadow-sm"
+                                                        title={`+${(req.srl_request_buses?.length || 0) - 3} buses más`}
+                                                    >
+                                                        +{(req.srl_request_buses?.length || 0) - 3}
+                                                    </span>
+                                                )}
                                                 {(req.srl_request_buses?.length === 0) && <span className="text-slate-400 text-xs italic">Sin buses</span>}
                                             </div>
                                         </td>
