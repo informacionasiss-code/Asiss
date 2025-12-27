@@ -65,14 +65,16 @@ export function parseCommand(text: string): ParsedCommand {
     // Extract duration
     const durationDays = extractDuration(text);
 
-    // Calculate end date if not provided but duration is
+    // Calculate end date logic
     let endDate = rawEndDate;
-    if (!endDate && startDate && durationDays) {
+
+    // If duration is explicitly stated, it takes precedence for end date calculation
+    // This fixes issues where a single date is detected as both start/end, ignoring the duration
+    if (startDate && durationDays) {
         endDate = calculateEndDate(startDate, durationDays);
     }
-
-    // For single-day events without end date, set end = start
-    if (startDate && !endDate && !durationDays) {
+    // If no duration and no end date, default to single day (end = start)
+    else if (startDate && !endDate) {
         endDate = startDate;
     }
 
