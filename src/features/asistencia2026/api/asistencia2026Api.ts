@@ -74,8 +74,10 @@ export async function fetchStaffWithShifts(
     // Apply turno filter
     if (filters?.turno && filters.turno !== 'TODOS') {
         if (filters.turno === 'DIA') {
-            query = query.or('turno.ilike.%dia%,turno.ilike.%day%');
+            // Include all day shifts: dia, day, mañana, morning, tarde, afternoon, rotativo, rotating
+            query = query.or('turno.ilike.%dia%,turno.ilike.%day%,turno.ilike.%mañana%,turno.ilike.%morning%,turno.ilike.%tarde%,turno.ilike.%afternoon%,turno.ilike.%rotativ%,turno.ilike.%rotating%');
         } else {
+            // Include all night shifts: noche, night
             query = query.or('turno.ilike.%noche%,turno.ilike.%night%');
         }
     }
