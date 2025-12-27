@@ -179,7 +179,7 @@ export async function executeVacation(
     if (!isSupabaseConfigured()) return { success: false, error: 'Supabase no configurado' };
 
     const { error } = await supabase
-        .from('attendance_vacations')
+        .from('attendance_vacaciones')
         .insert({
             staff_id: staffId,
             start_date: startDate,

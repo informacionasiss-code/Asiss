@@ -31,7 +31,7 @@ export const INTENT_LABELS: Record<CommandIntent, string> = {
 };
 
 export const INTENT_TABLES: Record<CommandIntent, string | null> = {
-    VACACIONES: 'attendance_vacations',
+    VACACIONES: 'attendance_vacaciones',
     LICENCIA: 'attendance_licenses',
     PERMISO: 'attendance_permissions',
     AUTORIZACION_LLEGADA: 'attendance_autorizaciones',
