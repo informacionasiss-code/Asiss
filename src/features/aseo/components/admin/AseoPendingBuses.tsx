@@ -60,7 +60,7 @@ export const AseoPendingBuses = () => {
                                 </div>
                                 <div className="space-y-2 mb-4">
                                     <div className="flex items-center gap-2 text-sm text-slate-600">
-                                        <Icon name="briefcase" size={14} />
+                                        <Icon name="user" size={14} />
                                         <span className="font-semibold">{bus.terminal}</span>
                                     </div>
                                     <div className="flex items-center gap-2 text-sm text-slate-600">

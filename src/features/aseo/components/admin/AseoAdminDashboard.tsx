@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Icon } from '../../../../shared/components/common/Icon';
-import { fetchRecords, fetchCleaners, fetchTasks } from '../../api/aseoApi';
+import { fetchAseoRecords, fetchAllCleaners, fetchTasks } from '../../api/aseoApi';
 
 interface Stats {
     totalRecordsToday: number;
@@ -16,17 +16,17 @@ interface Stats {
 export const AseoAdminDashboard = () => {
     const { data: records = [] } = useQuery({
         queryKey: ['aseo', 'records'],
-        queryFn: () => fetchRecords({ limit: 1000 }),
+        queryFn: () => fetchAseoRecords(),
     });
 
     const { data: cleaners = [] } = useQuery({
         queryKey: ['aseo', 'cleaners'],
-        queryFn: fetchCleaners,
+        queryFn: fetchAllCleaners,
     });
 
     const { data: tasks = [] } = useQuery({
         queryKey: ['aseo', 'tasks'],
-        queryFn: fetchTasks,
+        queryFn: () => fetchTasks(''),
     });
 
     const today = new Date().toISOString().split('T')[0];
@@ -86,7 +86,7 @@ export const AseoAdminDashboard = () => {
                 <div className="bg-white rounded-2xl shadow-lg p-6 border border-slate-200">
                     <h3 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-3">
                         <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                            <Icon name="briefcase" size={20} className="text-white" />
+                            <Icon name="user" size={20} className="text-white" />
                         </div>
                         Registros por Terminal
                     </h3>

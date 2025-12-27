@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Icon } from '../../../../shared/components/common/Icon';
-import { fetchRecords, fetchCleaners } from '../../api/aseoApi';
+import { fetchAseoRecords, fetchAllCleaners } from '../../api/aseoApi';
 
 export const AseoRecordsGallery = () => {
     const [selectedRecord, setSelectedRecord] = useState<any>(null);
@@ -16,12 +16,12 @@ export const AseoRecordsGallery = () => {
 
     const { data: records = [], isLoading } = useQuery({
         queryKey: ['aseo', 'records'],
-        queryFn: () => fetchRecords({ limit: 500 }),
+        queryFn: () => fetchAseoRecords(),
     });
 
     const { data: cleaners = [] } = useQuery({
         queryKey: ['aseo', 'cleaners'],
-        queryFn: fetchCleaners,
+        queryFn: fetchAllCleaners,
     });
 
     const filteredRecords = records.filter((r: any) => {

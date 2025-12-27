@@ -1,16 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { Icon } from '../../../../shared/components/common/Icon';
-import { fetchRecords, fetchCleaners } from '../../api/aseoApi';
+import { fetchAseoRecords, fetchAllCleaners } from '../../api/aseoApi';
 
 export const AseoStaffAnalytics = () => {
     const { data: records = [] } = useQuery({
         queryKey: ['aseo', 'records'],
-        queryFn: () => fetchRecords({ limit: 1000 }),
+        queryFn: () => fetchAseoRecords(),
     });
 
     const { data: cleaners = [] } = useQuery({
         queryKey: ['aseo', 'cleaners'],
-        queryFn: fetchCleaners,
+        queryFn: fetchAllCleaners,
     });
 
     // Calculate stats per cleaner

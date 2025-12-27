@@ -134,7 +134,7 @@ export const AseoRutLogin = ({ onLogin }: Props) => {
                                 </>
                             ) : (
                                 <>
-                                    <Icon name="log-in" size={24} />
+                                    <Icon name="check" size={24} />
                                     Ingresar
                                 </>
                             )}

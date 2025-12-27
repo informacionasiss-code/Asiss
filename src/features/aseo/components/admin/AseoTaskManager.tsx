@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../../../../shared/components/common/Icon';
-import { fetchTasks, fetchCleaners, createTask, updateTask } from '../../api/aseoApi';
+import { fetchTasks, fetchAllCleaners, createTask, updateTaskStatus } from '../../api/aseoApi';
 
 export const AseoTaskManager = () => {
     const queryClient = useQueryClient();
@@ -14,16 +14,16 @@ export const AseoTaskManager = () => {
 
     const { data: tasks = [] } = useQuery({
         queryKey: ['aseo', 'tasks'],
-        queryFn: fetchTasks,
+        queryFn: () => fetchTasks(''),
     });
 
     const { data: cleaners = [] } = useQuery({
         queryKey: ['aseo', 'cleaners'],
-        queryFn: fetchCleaners,
+        queryFn: fetchAllCleaners,
     });
 
     const createTaskMutation = useMutation({
-        mutationFn: (data: any) => createTask(data),
+        mutationFn: (data: any) => createTask(data.cleaner_id, data.title, data.description, data.created_by),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['aseo', 'tasks'] });
             setShowForm(false);
@@ -33,7 +33,7 @@ export const AseoTaskManager = () => {
     });
 
     const updateTaskMutation = useMutation({
-        mutationFn: ({ id, updates }: { id: string; updates: any }) => updateTask(id, updates),
+        mutationFn: ({ id, status }: { id: string; status: 'PENDIENTE' | 'TERMINADA' }) => updateTaskStatus(id, status),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['aseo', 'tasks'] });
         },
@@ -55,10 +55,7 @@ export const AseoTaskManager = () => {
         const newStatus = task.status === 'PENDIENTE' ? 'TERMINADA' : 'PENDIENTE';
         updateTaskMutation.mutate({
             id: task.id,
-            updates: {
-                status: newStatus,
-                completed_at: newStatus === 'TERMINADA' ? new Date().toISOString() : null,
-            },
+            status: newStatus,
         });
     };
 

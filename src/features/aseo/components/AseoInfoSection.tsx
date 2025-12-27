@@ -127,11 +127,11 @@ export const AseoInfoSection = ({ rut }: Props) => {
                 <h2 className="text-2xl font-black mb-2">{staff.nombre}</h2>
                 <div className="flex flex-wrap gap-2 text-sm">
                     <span className="px-3 py-1 bg-white/20 rounded-full font-semibold">
-                        <Icon name="briefcase" size={14} className="inline mr-1" />
+                        <Icon name="user" size={14} className="inline mr-1" />
                         {staff.cargo}
                     </span>
                     <span className="px-3 py-1 bg-white/20 rounded-full font-semibold">
-                        <Icon name="map-pin" size={14} className="inline mr-1" />
+                        <Icon name="x" size={14} className="inline mr-1" />
                         {staff.terminal_code}
                     </span>
                     <span className="px-3 py-1 bg-white/20 rounded-full font-semibold">
@@ -246,7 +246,7 @@ export const AseoInfoSection = ({ rut }: Props) => {
                     {dayChanges.map((dc) => (
                         <div key={dc.id} className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
                             <div className="flex items-center gap-2 mb-2">
-                                <Icon name="repeat" size={18} className="text-blue-600" />
+                                <Icon name="x" size={18} className="text-blue-600" />
                                 <h4 className="font-bold text-blue-900">Cambio de Día</h4>
                             </div>
                             <p className="text-sm text-blue-700">
