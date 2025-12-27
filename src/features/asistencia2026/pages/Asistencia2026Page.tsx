@@ -45,6 +45,8 @@ const TERMINALS: { value: TerminalCode | 'ALL'; label: string }[] = [
     { value: 'ALL', label: 'Todos' },
     { value: 'EL_ROBLE', label: 'El Roble' },
     { value: 'LA_REINA', label: 'La Reina' },
+    { value: 'MARIA_ANGELICA', label: 'María Angélica' },
+    { value: 'EL_DESCANSO', label: 'El Descanso' },
 ];
 
 const TURNO_OPTIONS = [

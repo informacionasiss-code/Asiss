@@ -1,8 +1,10 @@
-import { TerminalCode, TerminalContext, TerminalGroup, TerminalGroupCode } from '../types/terminal';
+import { TerminalCode, TerminalContext, TerminalGroup, TerminalGroupCode, EL_ROBLE_SUBTERMINALS } from '../types/terminal';
 
 export const TERMINALS: Record<TerminalCode, string> = {
   EL_ROBLE: 'El Roble',
   LA_REINA: 'La Reina',
+  MARIA_ANGELICA: 'María Angélica',
+  EL_DESCANSO: 'El Descanso',
   EL_SALTO: 'El Salto',
   LO_ECHEVERS: 'Lo Echevers',
   COLO_COLO: 'Colo Colo',
@@ -10,9 +12,9 @@ export const TERMINALS: Record<TerminalCode, string> = {
 
 export const TERMINAL_GROUPS: TerminalGroup[] = [
   {
-    code: 'ROBLE_Y_REINA',
-    name: 'El Roble + La Reina',
-    members: ['EL_ROBLE', 'LA_REINA'],
+    code: 'GRUPO_ROBLE',
+    name: 'Grupo El Roble',
+    members: EL_ROBLE_SUBTERMINALS,
   },
 ];
 
@@ -34,7 +36,12 @@ export const resolveTerminalsForContext = (context: TerminalContext): TerminalCo
   }
 
   if (context.mode === 'TERMINAL') {
-    return [context.value as TerminalCode];
+    const selected = context.value as TerminalCode;
+    // Special case: El Roble sub-terminals always show the whole group
+    if (EL_ROBLE_SUBTERMINALS.includes(selected)) {
+      return EL_ROBLE_SUBTERMINALS;
+    }
+    return [selected];
   }
 
   const group = TERMINAL_GROUPS.find((g) => g.code === context.value);
