@@ -296,25 +296,35 @@ export const AttendanceGrid = ({
         };
     };
 
-    // Mass mark all present for today
+    // Mass mark all present for today (Local Time)
     const handleMassMarkPresent = () => {
         if (!session) return;
-        const todayStr = new Date().toISOString().split('T')[0];
+
+        // Get generic local date YYYY-MM-DD
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const todayStr = `${year}-${month}-${day}`;
 
         const staffToMark = staff.filter((s) => {
             if (s.status === 'DESVINCULADO') return false;
             const status = getDayStatus(s, todayStr);
             if (status.isOff || status.license || status.vacation || status.permission) return false;
+            // Only mark if no mark exists (prevent overwriting 'A' or 'P')
             if (status.mark) return false;
             return true;
         });
 
         if (staffToMark.length === 0) {
-            alert('No hay personal pendiente de marcar para hoy');
+            alert(`No hay personal pendiente de marcar para hoy (${todayStr})`);
             return;
         }
 
-        if (confirm(`¿Marcar ${staffToMark.length} personas como PRESENTE hoy?`)) {
+        const uniqueTerminals = Array.from(new Set(staffToMark.map(s => s.terminal_code)));
+        const termLabel = uniqueTerminals.length === 1 ? uniqueTerminals[0] : `${uniqueTerminals.length} Terminales`;
+
+        if (confirm(`¿Marcar ${staffToMark.length} personas de ${termLabel} como PRESENTE para la fecha ${todayStr}?`)) {
             bulkMarkMutation.mutate({
                 staffIds: staffToMark.map((s) => s.id),
                 date: todayStr,
