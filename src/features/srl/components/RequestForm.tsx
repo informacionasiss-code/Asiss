@@ -14,6 +14,7 @@ interface Props {
 export const RequestForm = ({ requestId, onSuccess }: Props) => {
     const { session } = useSessionStore();
     const createMutation = useCreateSrlRequest();
+    const updateMutation = useUpdateSrlRequest(); // Moved here - hooks must be at top level
 
     const isEdit = !!requestId;
     const { data: requests } = useSrlRequests(isEdit ? { id: requestId!, terminal: 'ALL', status: 'TODOS', criticality: 'TODAS', search: '' } : undefined);
@@ -87,8 +88,7 @@ export const RequestForm = ({ requestId, onSuccess }: Props) => {
                 if (validNewBuses.length > 0) {
                     alert('Por ahora solo se pueden editar los detalles de la solicitud, no agregar nuevos buses.');
                 }
-                const updateMutation = useUpdateSrlRequest(); // Assuming hook exists, or we just close
-                // Ideally call update header logic here
+                // TODO: Implement actual update logic with updateMutation.mutateAsync()
                 onSuccess();
             } else {
                 await createMutation.mutateAsync({

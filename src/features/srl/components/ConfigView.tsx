@@ -11,8 +11,8 @@ export const ConfigView = () => {
         enabled: true,
         recipients: '',
         cc_emails: '',
-        subject_template: 'Nueva Solicitud SRL - Terminal {terminal}',
-        body_template: 'Se ha generado una nueva solicitud para el terminal {terminal}.\n\nDetalles:\n{details}'
+        subject_template: 'Solicitud SRL - {terminal} - {buses}',
+        body_template: 'NUEVA SOLICITUD SRL\n\nTerminal: {terminal}\nCriticidad: {criticality}\nFecha: {date}\n\nBuses Afectados:\n{details}\n\n---\nSistema ASISS'
     });
 
     useEffect(() => {
