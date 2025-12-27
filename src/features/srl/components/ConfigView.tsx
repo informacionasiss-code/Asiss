@@ -110,7 +110,9 @@ export const ConfigView = () => {
                             value={formData.body_template || ''}
                             onChange={e => setFormData({ ...formData, body_template: e.target.value })}
                         />
-                        <p className="text-xs text-slate-400 mt-1">Variables disponibles: {'{terminal}'}, {'{id}'}, {'{date}'}, {'{details}'}</p>
+                        <p className="text-xs text-slate-400 mt-1">
+                            <strong>Variables disponibles:</strong> {'{terminal}'}, {'{id}'}, {'{date}'}, {'{details}'}, {'{status}'}, {'{buses}'}, {'{criticality}'}
+                        </p>
                     </div>
                 </div>
 

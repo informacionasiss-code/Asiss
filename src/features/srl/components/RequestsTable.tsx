@@ -9,7 +9,6 @@ interface Props {
 }
 
 export const RequestsTable = ({ onCreate, onView }: Props) => {
-    // Local state for filters
     const [filters, setFilters] = useState({
         terminal: 'ALL',
         status: 'TODOS',
@@ -20,113 +19,120 @@ export const RequestsTable = ({ onCreate, onView }: Props) => {
     const { data: requests = [], isLoading } = useSrlRequests(filters);
 
     const getStatusBadge = (status: SrlStatus) => {
-        const styles = {
-            CREADA: 'bg-blue-50 text-blue-700 border-blue-200',
-            ENVIADA: 'bg-sky-50 text-sky-700 border-sky-200',
-            PROGRAMADA: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-            EN_REVISION: 'bg-amber-50 text-amber-700 border-amber-200',
-            REPARADA: 'bg-teal-50 text-teal-700 border-teal-200',
-            NO_REPARADA: 'bg-red-50 text-red-700 border-red-200',
-            REAGENDADA: 'bg-orange-50 text-orange-700 border-orange-200',
-            CERRADA: 'bg-slate-100 text-slate-600 border-slate-200',
+        const config = {
+            CREADA: { bg: 'from-blue-50 to-blue-100', text: 'text-blue-700', border: 'border-blue-200', icon: 'file-plus' },
+            ENVIADA: { bg: 'from-sky-50 to-sky-100', text: 'text-sky-700', border: 'border-sky-200', icon: 'send' },
+            PROGRAMADA: { bg: 'from-indigo-50 to-indigo-100', text: 'text-indigo-700', border: 'border-indigo-200', icon: 'calendar' },
+            EN_REVISION: { bg: 'from-amber-50 to-amber-100', text: 'text-amber-700', border: 'border-amber-200', icon: 'eye' },
+            REPARADA: { bg: 'from-teal-50 to-teal-100', text: 'text-teal-700', border: 'border-teal-200', icon: 'check-circle' },
+            NO_REPARADA: { bg: 'from-red-50 to-red-100', text: 'text-red-700', border: 'border-red-200', icon: 'x-circle' },
+            REAGENDADA: { bg: 'from-orange-50 to-orange-100', text: 'text-orange-700', border: 'border-orange-200', icon: 'clock' },
+            CERRADA: { bg: 'from-slate-100 to-slate-200', text: 'text-slate-600', border: 'border-slate-300', icon: 'archive' },
         };
+        const style = config[status] || config.CREADA;
         return (
-            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${styles[status] || styles.CREADA} uppercase tracking-wider`}>
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border bg-gradient-to-r ${style.bg} ${style.text} ${style.border} uppercase tracking-wider shadow-sm`}>
+                <Icon name={style.icon as any} size={12} />
                 {status.replace('_', ' ')}
             </span>
         );
     };
 
     const getCriticalityBadge = (crit: SrlCriticality) => {
-        const styles = {
-            BAJA: 'text-slate-500 bg-slate-100',
-            MEDIA: 'text-amber-600 bg-amber-50',
-            ALTA: 'text-red-600 bg-red-50 font-bold',
+        const config = {
+            BAJA: { bg: 'bg-slate-100', text: 'text-slate-600', icon: 'minus' },
+            MEDIA: { bg: 'bg-amber-100', text: 'text-amber-700', icon: 'alert-circle' },
+            ALTA: { bg: 'bg-gradient-to-r from-red-500 to-red-600', text: 'text-white', icon: 'alert-triangle' },
         };
+        const style = config[crit];
         return (
-            <span className={`px-2 py-0.5 rounded text-xs border border-transparent ${styles[crit]}`}>
+            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold ${style.bg} ${style.text} shadow-sm`}>
+                <Icon name={style.icon as any} size={12} />
                 {crit}
             </span>
         );
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Toolbar */}
-            <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                <div className="flex flex-wrap gap-3 w-full md:w-auto">
-                    <div className="relative flex-1 md:flex-none">
-                        <Icon name="search" className="absolute left-3 top-2.5 text-slate-400" size={18} />
+            <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center bg-gradient-to-br from-white to-slate-50 p-5 rounded-2xl shadow-lg border border-slate-200/60">
+                <div className="flex flex-wrap gap-3 w-full lg:w-auto">
+                    <div className="relative flex-1 lg:flex-none min-w-[240px]">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                            <Icon name="search" size={18} />
+                        </div>
                         <input
                             placeholder="Buscar PPU, ID..."
-                            className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm w-full md:w-64 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
+                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition-all shadow-sm hover:shadow-md"
                             value={filters.search}
                             onChange={e => setFilters({ ...filters, search: e.target.value })}
                         />
                     </div>
 
                     <select
-                        className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-100 outline-none text-slate-600 font-medium"
+                        className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-400 outline-none text-slate-700 font-semibold shadow-sm hover:shadow-md transition-all cursor-pointer"
                         value={filters.terminal}
                         onChange={e => setFilters({ ...filters, terminal: e.target.value })}
                     >
-                        <option value="ALL">Todo Terminal</option>
-                        <option value="EL_ROBLE">El Roble</option>
-                        <option value="LA_REINA">La Reina</option>
-                        <option value="MARIA_ANGELICA">Maria Angélica</option>
-                        <option value="EL_DESCANSO">El Descanso</option>
+                        <option value="ALL">🏢 Todos los Terminales</option>
+                        <option value="EL_ROBLE">🌳 El Roble</option>
+                        <option value="LA_REINA">👑 La Reina</option>
+                        <option value="MARIA_ANGELICA">⭐ María Angélica</option>
+                        <option value="EL_DESCANSO">🏞️ El Descanso</option>
                     </select>
 
                     <select
-                        className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-100 outline-none text-slate-600 font-medium"
+                        className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-400 outline-none text-slate-700 font-semibold shadow-sm hover:shadow-md transition-all cursor-pointer"
                         value={filters.status}
                         onChange={e => setFilters({ ...filters, status: e.target.value })}
                     >
-                        <option value="TODOS">Todo Estado</option>
-                        <option value="CREADA">Creada</option>
-                        <option value="ENVIADA">Enviada</option>
-                        <option value="PROGRAMADA">Programada</option>
-                        <option value="REPARADA">Reparada</option>
-                        <option value="CERRADA">Cerrada</option>
+                        <option value="TODOS">📋 Todos los Estados</option>
+                        <option value="CREADA">🆕 Creada</option>
+                        <option value="ENVIADA">📧 Enviada</option>
+                        <option value="PROGRAMADA">📅 Programada</option>
+                        <option value="REPARADA">✅ Reparada</option>
+                        <option value="CERRADA">🔒 Cerrada</option>
                     </select>
                 </div>
 
                 <button
                     onClick={onCreate}
-                    className="w-full md:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm shadow-blue-200 flex items-center justify-center gap-2 transition-all active:scale-95"
+                    className="w-full lg:w-auto px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 transition-all active:scale-95 hover:shadow-xl hover:shadow-blue-500/40"
                 >
                     <Icon name="plus" size={20} />
-                    <span className="md:hidden lg:inline">Nueva Solicitud</span>
+                    <span>Nueva Solicitud</span>
                 </button>
             </div>
 
             {/* Table Content */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-xl border border-slate-200/60 overflow-hidden">
                 {isLoading ? (
-                    <div className="p-12 text-center">
-                        <div className="inline-block animate-spin text-blue-600 mb-4"><Icon name="loader" size={32} /></div>
-                        <p className="text-slate-500 font-medium">Cargando solicitudes...</p>
+                    <div className="p-16 text-center">
+                        <div className="inline-block animate-spin text-blue-600 mb-4">
+                            <Icon name="loader" size={40} />
+                        </div>
+                        <p className="text-slate-500 font-semibold">Cargando solicitudes...</p>
                     </div>
                 ) : requests.length === 0 ? (
-                    <div className="p-16 text-center">
-                        <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-50 rounded-full mb-4">
-                            <Icon name="inbox" size={32} className="text-slate-300" />
+                    <div className="p-20 text-center">
+                        <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full mb-5 shadow-lg">
+                            <Icon name="inbox" size={40} className="text-slate-300" />
                         </div>
-                        <h3 className="text-lg font-bold text-slate-900">No hay solicitudes</h3>
-                        <p className="text-slate-500 mt-1 max-w-sm mx-auto">No se encontraron registros con los filtros actuales. Intente limpiar los filtros o cree una nueva solicitud.</p>
+                        <h3 className="text-xl font-black text-slate-900">No hay solicitudes</h3>
+                        <p className="text-slate-500 mt-2 max-w-md mx-auto">No se encontraron registros. Cree una nueva solicitud o ajuste los filtros.</p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
+                        <table className="w-full">
                             <thead>
-                                <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500 font-bold tracking-wider">
-                                    <th className="px-6 py-4">ID / Terminal</th>
-                                    <th className="px-6 py-4">Estado</th>
-                                    <th className="px-6 py-4">Criticidad</th>
-                                    <th className="px-6 py-4">Buses Afectados</th>
-                                    <th className="px-6 py-4">Fecha Creación</th>
-                                    <th className="px-6 py-4">Required</th>
-                                    <th className="px-6 py-4 text-right">Acción</th>
+                                <tr className="bg-gradient-to-r from-slate-50 to-slate-100 border-b-2 border-slate-200">
+                                    <th className="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">Terminal / ID</th>
+                                    <th className="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">Estado</th>
+                                    <th className="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">Criticidad</th>
+                                    <th className="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">Buses</th>
+                                    <th className="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">Creación</th>
+                                    <th className="px-6 py-4 text-right text-xs font-black text-slate-600 uppercase tracking-wider">Acción</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -134,43 +140,51 @@ export const RequestsTable = ({ onCreate, onView }: Props) => {
                                     <tr
                                         key={req.id}
                                         onClick={() => onView(req.id)}
-                                        className="hover:bg-blue-50/50 transition-colors cursor-pointer group"
+                                        className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 transition-all duration-200 cursor-pointer group"
                                     >
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col">
+                                        <td className="px-6 py-5">
+                                            <div className="flex flex-col gap-1">
+                                                <span className="font-black text-sm text-slate-900">{req.terminal_code.replace('_', ' ')}</span>
                                                 <span className="font-mono text-xs text-slate-400">#{req.id.slice(0, 8)}</span>
-                                                <span className="font-bold text-slate-700 text-sm mt-0.5">{req.terminal_code.replace('_', ' ')}</span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-5">
                                             {getStatusBadge(req.status)}
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-5">
                                             {getCriticalityBadge(req.criticality)}
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex -space-x-2">
-                                                {req.srl_request_buses?.slice(0, 3).map((bus, i) => (
-                                                    <div key={i} className="w-8 h-8 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-slate-600" title={bus.bus_ppu}>
-                                                        {bus.bus_ppu.slice(0, 2)}
-                                                    </div>
-                                                ))}
-                                                {(req.srl_request_buses?.length || 0) > 3 && (
-                                                    <div className="w-8 h-8 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-[10px] font-bold text-slate-600">
-                                                        +{(req.srl_request_buses?.length || 0) - 3}
-                                                    </div>
-                                                )}
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex -space-x-2">
+                                                    {req.srl_request_buses?.slice(0, 3).map((bus, i) => (
+                                                        <div
+                                                            key={i}
+                                                            className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 border-2 border-white flex items-center justify-center text-[10px] font-black text-white shadow-md"
+                                                            title={bus.bus_ppu}
+                                                        >
+                                                            {bus.bus_ppu.slice(0, 2)}
+                                                        </div>
+                                                    ))}
+                                                    {(req.srl_request_buses?.length || 0) > 3 && (
+                                                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 border-2 border-white flex items-center justify-center text-[10px] font-black text-white shadow-md">
+                                                            +{(req.srl_request_buses?.length || 0) - 3}
+                                                        </div>
+                                                    )}
+                                                </div>
                                                 {(req.srl_request_buses?.length === 0) && <span className="text-slate-400 text-xs italic">Sin buses</span>}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-slate-600">
-                                            {new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(req.created_at))}
+                                        <td className="px-6 py-5 text-sm text-slate-600 font-medium">
+                                            {new Intl.DateTimeFormat('es-CL', {
+                                                day: '2-digit',
+                                                month: 'short',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            }).format(new Date(req.created_at))}
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-slate-600">
-                                            {req.required_date ? <span className="text-red-600 font-medium">{req.required_date}</span> : <span className="text-slate-300">-</span>}
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors opacity-0 group-hover:opacity-100">
+                                        <td className="px-6 py-5 text-right">
+                                            <button className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all opacity-0 group-hover:opacity-100 shadow-sm hover:shadow-md">
                                                 <Icon name="chevron-right" size={20} />
                                             </button>
                                         </td>
