@@ -141,7 +141,7 @@ export const RequestsTable = ({ onCreate, onView }: Props) => {
                                 {requests.map((req) => (
                                     <tr
                                         key={req.id}
-                                        onClick={() => onView(req.id)}
+                                        onClick={() => setDetailModalId(req.id)}
                                         className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 transition-all duration-200 cursor-pointer group"
                                     >
                                         <td className="px-6 py-5">
