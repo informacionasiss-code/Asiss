@@ -1,7 +1,7 @@
 /**
  * RutPdfExportModal - Professional PDF generator for worker monthly schedule
- * Enterprise Edition - PRINTER FRIENDLY (B&W)
- * Optimized for Black & White printing with high contrast and clear markers.
+ * Enterprise Edition - PRINTER FRIENDLY (B&W) - SINGLE PAGE COMPACT
+ * Optimized for Black & White printing, single page layout, and high information density.
  */
 
 import { useState, useMemo } from 'react';
@@ -34,7 +34,7 @@ interface RutPdfExportModalProps {
     licenses: AttendanceLicense[];
     permissions: AttendancePermission[];
     vacations: { staff_id: string; start_date: string; end_date: string }[];
-    incidences: AttendanceIncidences; // Added incidences
+    incidences: AttendanceIncidences;
     year: number;
     month: number;
 }
@@ -84,103 +84,87 @@ export const RutPdfExportModal = ({
             const doc = new jsPDF({
                 orientation: 'landscape',
                 unit: 'mm',
-                format: 'letter',
+                format: 'letter', // 279.4 x 215.9 mm
             });
 
             const pageWidth = doc.internal.pageSize.getWidth();
             const pageHeight = doc.internal.pageSize.getHeight();
-            const margin = 12;
+            const margin = 10; // Tighter margin
 
-            // B&W / Printer Friendly Palette - High Constrast
+            // B&W Palette - High Contrast
             const colors = {
-                brand: [0, 0, 0] as [number, number, number],          // Black Header
-                headerBg: [255, 255, 255] as [number, number, number], // White Background
-                textMain: [0, 0, 0] as [number, number, number],       // Black Text
-                textLight: [60, 60, 60] as [number, number, number],   // Dark Gray
-                border: [0, 0, 0] as [number, number, number],         // Black Borders
+                headerBg: [240, 240, 240] as [number, number, number],
+                textMain: [0, 0, 0] as [number, number, number],
+                textLight: [80, 80, 80] as [number, number, number],
+                border: [0, 0, 0] as [number, number, number],
 
-                // Event Backgrounds (Grayscale for Contrast)
-                bgOff: [230, 230, 230] as [number, number, number],    // Light Gray (Libre)
-                bgLic: [255, 255, 255] as [number, number, number],    // White
-                bgVac: [255, 255, 255] as [number, number, number],    // White
-                bgPer: [255, 255, 255] as [number, number, number],    // White
-                bgNoMark: [40, 40, 40] as [number, number, number],    // Dark Gray (White text)
-                bgNoCred: [180, 180, 180] as [number, number, number], // Medium Gray
-                bgDayChange: [255, 255, 255] as [number, number, number], // White
-                bgReduced: [255, 255, 255] as [number, number, number],
+                // Status Backgrounds
+                bgOff: [235, 235, 235] as [number, number, number],    // Light Gray
+                bgAlert: [50, 50, 50] as [number, number, number],     // Dark (for white text)
+                bgWarning: [200, 200, 200] as [number, number, number],// Medium Gray
+                bgWhite: [255, 255, 255] as [number, number, number],
             };
 
-            // --- HEADER SECTION ---
-
-            // Top bar (Black)
-            doc.setFillColor(...colors.brand);
-            doc.rect(0, 0, pageWidth, 25, 'F');
+            // --- HEADER (Compact) ---
+            doc.setFillColor(0, 0, 0);
+            doc.rect(0, 0, pageWidth, 18, 'F'); // Reduced height
 
             doc.setTextColor(255, 255, 255);
-            doc.setFontSize(18);
+            doc.setFontSize(14); // Smaller title
             doc.setFont('helvetica', 'bold');
-            doc.text('ASISTENCIA MENSUAL', margin, 12);
+            doc.text('ASISTENCIA MENSUAL', margin, 10);
 
-            doc.setFontSize(10);
+            doc.setFontSize(8);
             doc.setFont('helvetica', 'normal');
-            doc.text('REPORTE OFICIAL DE TURNOS Y ASISTENCIA', margin, 18);
+            doc.text('REPORTE OFICIAL', margin, 15);
 
-            // Period Info
-            doc.setFontSize(14);
-            doc.text(`${getMonthName(selectedMonth).toUpperCase()} ${selectedYear}`, pageWidth - margin, 12, { align: 'right' });
-            doc.setFontSize(9);
-            doc.text('Ley 40 Horas (43 hrs/sem)', pageWidth - margin, 18, { align: 'right' });
+            doc.setFontSize(11);
+            doc.text(`${getMonthName(selectedMonth).toUpperCase()} ${selectedYear}`, pageWidth - margin, 10, { align: 'right' });
+            doc.setFontSize(7);
+            doc.text('Ley 40 Horas', pageWidth - margin, 15, { align: 'right' });
 
 
-            // --- WORKER INFO CARD (Borders only) ---
+            // --- INFO CARD (Compact) ---
+            const infoY = 22;
             doc.setDrawColor(...colors.border);
-            doc.setLineWidth(0.3);
-            doc.setFillColor(...colors.headerBg);
-            doc.roundedRect(margin, 30, pageWidth - 2 * margin, 22, 1, 1, 'S'); // 'S' for stroke only (no fill needed if white)
+            doc.setLineWidth(0.2);
+            doc.rect(margin, infoY, pageWidth - 2 * margin, 18, 'S');
 
-            // Name
+            // Line 1: Name and RUT
             doc.setTextColor(...colors.textMain);
-            doc.setFontSize(12);
+            doc.setFontSize(10);
             doc.setFont('helvetica', 'bold');
-            doc.text(selectedStaff.nombre.toUpperCase(), margin + 5, 38);
+            doc.text(selectedStaff.nombre.toUpperCase(), margin + 4, infoY + 6);
 
-            // Details Grid
-            doc.setFontSize(9);
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`RUT: ${selectedStaff.rut}`, margin + 120, infoY + 6);
+
+            // Line 2: Details
+            doc.setFontSize(8);
+            doc.text('CARGO:', margin + 4, infoY + 12);
+            doc.setFont('helvetica', 'bold');
+            doc.text(selectedStaff.cargo.substring(0, 25), margin + 18, infoY + 12);
             doc.setFont('helvetica', 'normal');
 
-            // Column 1
-            doc.text('RUT:', margin + 5, 45);
+            doc.text('TERMINAL:', margin + 70, infoY + 12);
             doc.setFont('helvetica', 'bold');
-            doc.text(selectedStaff.rut, margin + 25, 45);
+            doc.text(selectedStaff.terminal_code, margin + 88, infoY + 12);
             doc.setFont('helvetica', 'normal');
 
-            // Column 2
-            doc.text('CARGO:', margin + 70, 45);
-            doc.setFont('helvetica', 'bold');
-            doc.text(selectedStaff.cargo, margin + 90, 45);
-            doc.setFont('helvetica', 'normal');
-
-            // Column 3
-            doc.text('TERMINAL:', margin + 140, 45);
-            doc.setFont('helvetica', 'bold');
-            doc.text(selectedStaff.terminal_code, margin + 165, 45);
-            doc.setFont('helvetica', 'normal');
-
-            // Row 2
+            // Shift info
             const shiftType = selectedStaff.shift ? shiftTypesMap.get(selectedStaff.shift.shift_type_code) : null;
-
-            doc.text('TURNOS:', margin + 5, 50);
+            doc.text('TURNO:', margin + 120, infoY + 12);
             doc.setFont('helvetica', 'bold');
-            doc.text(shiftType?.name || '5x2 Base', margin + 25, 50);
+            doc.text(shiftType?.name || 'Base', margin + 135, infoY + 12);
             doc.setFont('helvetica', 'normal');
 
-            doc.text('HORARIO BASE:', margin + 70, 50);
+            doc.text('HORARIO:', margin + 180, infoY + 12);
             doc.setFont('helvetica', 'bold');
-            doc.text(selectedStaff.horario || 'Sin asignar', margin + 100, 50);
-            doc.setFont('helvetica', 'normal');
+            doc.text(selectedStaff.horario || 'N/A', margin + 198, infoY + 12);
 
 
-            // --- CALENDAR LOGIC ---
+            // --- DATA PREP ---
             const monthDates = getMonthDates(selectedYear, selectedMonth);
             const weeks: string[][] = [];
             let currentWeek: string[] = [];
@@ -198,15 +182,14 @@ export const RutPdfExportModal = ({
                 weeks.push(currentWeek);
             }
 
-            // Build Table Body
-            const tableBody: string[][] = [];
-
             const incidentsMap = {
                 noMark: new Set(incidences.noMarcaciones.filter(i => i.rut === selectedStaff.rut).map(i => i.date)),
                 noCred: new Set(incidences.sinCredenciales.filter(i => i.rut === selectedStaff.rut).map(i => i.date)),
                 dayChange: new Map(incidences.cambiosDia.filter(i => i.rut === selectedStaff.rut).map(i => [i.date, i])),
+                auth: new Set(incidences.autorizaciones.filter(i => i.rut === selectedStaff.rut).map(i => i.date)),
             };
 
+            const tableBody: string[][] = [];
 
             for (const week of weeks) {
                 const row: string[] = [];
@@ -222,42 +205,14 @@ export const RutPdfExportModal = ({
 
                     const date = new Date(dateStr + 'T12:00:00');
                     const dayNum = date.getDate();
+                    let cellText = `${dayNum}`;
+                    let statusText = '';
+                    let isSpecial = false;
 
-                    // Priority handling
-                    const dayChange = incidentsMap.dayChange.get(dateStr);
-                    if (dayChange) {
-                        row.push(`${dayNum}\nCAMBIO DE DÍA\n(Por ${dayChange.target_date})`);
-                        continue;
-                    }
-
-                    const hasLicense = licenses.some(l => l.staff_id === selectedStaff.id && dateStr >= l.start_date && dateStr <= l.end_date);
-                    if (hasLicense) {
-                        row.push(`${dayNum}\nLICENCIA\nMÉDICA`);
-                        continue;
-                    }
-
-                    const hasVacation = vacations.some(v => v.staff_id === selectedStaff.id && dateStr >= v.start_date && dateStr <= v.end_date);
-                    if (hasVacation) {
-                        row.push(`${dayNum}\nVACACIONES`);
-                        continue;
-                    }
-
-                    const hasPerm = permissions.some(p => p.staff_id === selectedStaff.id && dateStr >= p.start_date && dateStr <= p.end_date);
-                    if (hasPerm) {
-                        row.push(`${dayNum}\nPERMISO`);
-                        continue;
-                    }
-
-                    if (incidentsMap.noMark.has(dateStr)) {
-                        row.push(`${dayNum}\nNO\nMARCACIÓN`);
-                        continue;
-                    }
-                    if (incidentsMap.noCred.has(dateStr)) {
-                        row.push(`${dayNum}\nSIN\nCREDENCIAL`);
-                        continue;
-                    }
-
+                    // 1. Core Shift Logic (Always calc shift first)
                     let isOff = false;
+                    let displayHorario = '';
+
                     if (selectedStaff.shift) {
                         const shiftPattern = shiftType?.pattern_json;
                         if (shiftPattern) {
@@ -268,135 +223,165 @@ export const RutPdfExportModal = ({
                         isOff = dayOfWeek === 0 || dayOfWeek === 6;
                     }
 
-                    if (isOff) {
-                        row.push(`${dayNum}\nLIBRE`);
-                    } else {
+                    if (!isOff) {
                         const isReduced = reducedDays.includes(dateStr);
                         let horario = selectedStaff.horario || '10:00-20:00';
-                        if (isReduced) {
-                            horario = getAdjustedHorario(horario, true);
-                        }
-                        const formattedTime = horario.replace('-', ' - ');
-                        row.push(`${dayNum}\n${formattedTime}${isReduced ? '*' : ''}`);
+                        if (isReduced) horario = getAdjustedHorario(horario, true);
+                        displayHorario = horario.replace('-', '-');
                     }
+
+                    // 2. Incident/Status Overrides
+                    const dayChange = incidentsMap.dayChange.get(dateStr);
+                    const hasLicense = licenses.some(l => l.staff_id === selectedStaff.id && dateStr >= l.start_date && dateStr <= l.end_date);
+                    const hasVacation = vacations.some(v => v.staff_id === selectedStaff.id && dateStr >= v.start_date && dateStr <= v.end_date);
+                    const hasPerm = permissions.some(p => p.staff_id === selectedStaff.id && dateStr >= p.start_date && dateStr <= p.end_date);
+                    const hasNoMark = incidentsMap.noMark.has(dateStr);
+                    const hasNoCred = incidentsMap.noCred.has(dateStr);
+                    const hasAuth = incidentsMap.auth.has(dateStr);
+                    const mark = marks.find(m => m.staff_id === selectedStaff.id && m.mark_date === dateStr);
+
+                    // Build display stack
+                    if (dayChange) {
+                        statusText = `CAMBIO DÍA`;
+                        // Maybe show target? Space is tight.
+                    } else if (hasLicense) {
+                        statusText = 'LICENCIA';
+                    } else if (hasVacation) {
+                        statusText = 'VACACIONES';
+                    } else if (hasPerm) {
+                        statusText = 'PERMISO';
+                    } else if (hasNoMark) {
+                        statusText = 'NO MARCACIÓN';
+                    } else if (hasNoCred) {
+                        statusText = 'SIN CREDENCIAL';
+                    } else if (isOff) {
+                        statusText = 'LIBRE';
+                    } else {
+                        // Regular day - check attendance
+                        if (mark) {
+                            if (mark.mark === 'P') statusText = 'PRESENTE';
+                            else if (mark.mark === 'A') statusText = 'AUSENTE';
+                        } else {
+                            // No mark, past date?
+                            const today = new Date().toISOString().split('T')[0];
+                            if (dateStr < today) statusText = 'AUSENTE'; // Infer absence if pending
+                        }
+                    }
+
+                    // Append Auth if exists and space permits
+                    if (hasAuth) statusText += '\n(AUTORIZADO)';
+
+                    // Combine:
+                    // [Day]
+                    // [Time] (if not off)
+                    // [Status]
+
+                    if (!isOff && displayHorario && !['LICENCIA', 'VACACIONES'].includes(statusText)) {
+                        cellText += `\n${displayHorario}`;
+                    }
+                    if (statusText) {
+                        cellText += `\n${statusText}`;
+                    }
+
+                    row.push(cellText);
                 }
                 tableBody.push(row);
             }
 
-            // --- DRAW TABLE (High Contrast) ---
+
+            // --- TABLE RENDER ---
             autoTable(doc, {
-                startY: 60,
-                head: [['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO', 'DOMINGO']],
+                startY: 45, // Moved up
+                head: [['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM']],
                 body: tableBody,
-                theme: 'grid', // 'grid' theme gives us the borders we need
+                theme: 'grid',
                 headStyles: {
-                    fillColor: [0, 0, 0], // Black header
+                    fillColor: [0, 0, 0],
                     textColor: [255, 255, 255],
-                    fontSize: 10,
+                    fontSize: 8,
                     fontStyle: 'bold',
                     halign: 'center',
-                    valign: 'middle',
-                    cellPadding: 4,
+                    cellPadding: 2,
                     lineWidth: 0.1,
-                    lineColor: [0, 0, 0]
                 },
                 styles: {
-                    fontSize: 9,
-                    cellPadding: 3,
+                    fontSize: 7, // Smaller font for density
+                    cellPadding: 2,
                     halign: 'center',
                     valign: 'middle',
-                    minCellHeight: 25,
-                    lineColor: [0, 0, 0], // Black borders
-                    lineWidth: 0.2, // Slightly clearer borders
-                    textColor: [0, 0, 0], // Black text
-                    fontStyle: 'normal'
+                    minCellHeight: 16, // Reduced height to fit page
+                    lineColor: [0, 0, 0],
+                    lineWidth: 0.1,
+                    textColor: [0, 0, 0],
+                    overflow: 'linebreak',
                 },
                 columnStyles: {
-                    0: { cellWidth: 36 },
-                    1: { cellWidth: 36 },
-                    2: { cellWidth: 36 },
-                    3: { cellWidth: 36 },
-                    4: { cellWidth: 36 },
-                    5: { cellWidth: 36 },
-                    6: { cellWidth: 36 },
+                    // evenly distributed
                 },
                 didParseCell: (data) => {
                     const text = data.cell.text.join('\n').toUpperCase();
-                    data.cell.styles.fillColor = [255, 255, 255]; // Default white
+                    data.cell.styles.fillColor = [255, 255, 255];
 
                     if (text.includes('LIBRE')) {
-                        data.cell.styles.fillColor = colors.bgOff; // Light Gray
-                    } else if (text.includes('LICENCIA')) {
+                        data.cell.styles.fillColor = colors.bgOff;
+                    } else if (text.includes('NO MARCACIÓN') || text.includes('AUSENTE')) {
+                        data.cell.styles.fillColor = colors.bgAlert;
+                        data.cell.styles.textColor = [255, 255, 255];
                         data.cell.styles.fontStyle = 'bold';
-                        // Keep white to save ink/toner, bold text is enough
-                    } else if (text.includes('VACACIONES')) {
+                    } else if (text.includes('SIN CREDENCIAL')) {
+                        data.cell.styles.fillColor = colors.bgWarning;
                         data.cell.styles.fontStyle = 'bold';
-                    } else if (text.includes('PERMISO')) {
+                    } else if (text.includes('LICENCIA') || text.includes('VACACIONES')) {
                         data.cell.styles.fontStyle = 'bold';
-                    } else if (text.includes('NO MARCACIÓN') || text.includes('NO\nMARCACIÓN')) {
-                        data.cell.styles.fillColor = [50, 50, 50]; // Dark Gray
-                        data.cell.styles.textColor = [255, 255, 255]; // White Text
-                        data.cell.styles.fontStyle = 'bold';
-                    } else if (text.includes('SIN CREDENCIAL') || text.includes('SIN\nCREDENCIAL')) {
-                        data.cell.styles.fillColor = [200, 200, 200]; // Medium Gray
-                        data.cell.styles.fontStyle = 'bold';
-                    } else if (text.includes('CAMBIO DE DÍA') || text.includes('CAMBIO')) {
-                        data.cell.styles.fontStyle = 'bold';
-                        // Italic maybe to denote change? 
-                        // Bold is safer for reading.
-                    } else if (text.includes('*')) {
-                        // Reduced days - just the asterisk
+                    } else if (text.includes('PRESENTE')) {
+                        // Maybe bold?
+                        data.cell.styles.textColor = [0, 0, 0];
                     }
                 },
-                margin: { left: margin, right: margin },
+                margin: { left: margin, right: margin, bottom: 20 },
             });
 
-            // --- LEGEND (Updated for B&W) ---
-            const finalY = (doc as any).lastAutoTable.finalY + 10;
+
+            // --- LEGEND (Footer) ---
+            const finalY = pageHeight - 15; // Force to bottom
 
             doc.setDrawColor(0, 0, 0);
-            doc.setLineWidth(0.3);
-            doc.rect(margin, finalY, pageWidth - 2 * margin, 20); // Simple rect
+            doc.setLineWidth(0.5);
+            doc.line(margin, finalY - 5, pageWidth - margin, finalY - 5);
 
-            doc.setFontSize(8);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(0, 0, 0);
-            doc.text('LEYENDA:', margin + 5, finalY + 6);
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'normal');
 
-            const drawLegendItem = (label: string, filled: boolean, dark: boolean, x: number, y: number) => {
-                doc.setDrawColor(0, 0, 0);
-                if (filled) {
-                    if (dark) doc.setFillColor(50, 50, 50);
-                    else doc.setFillColor(230, 230, 230);
-                    doc.rect(x, y - 2, 4, 4, 'FD');
+            // Legend Row
+            const lY = finalY;
+            const gap = 35;
+            let currentX = margin;
+
+            // Helper
+            const leg = (name: string, fill: [number, number, number] | null, textCol: [number, number, number]) => {
+                if (fill) {
+                    doc.setFillColor(...fill);
+                    doc.rect(currentX, lY - 2, 3, 3, 'F');
+                    doc.rect(currentX, lY - 2, 3, 3, 'S'); // border
                 } else {
-                    doc.rect(x, y - 2, 4, 4, 'S');
+                    doc.rect(currentX, lY - 2, 3, 3, 'S');
                 }
-
-                doc.setTextColor(0, 0, 0);
-                doc.setFont('helvetica', 'normal');
-                doc.text(label, x + 6, y + 1);
+                doc.setTextColor(...textCol);
+                doc.text(name, currentX + 5, lY);
+                currentX += gap;
             };
 
-            const row1Y = finalY + 12;
-            const col1 = margin + 8;
-            const col2 = margin + 55;
-            const col3 = margin + 110;
-            const col4 = margin + 165;
+            // Items
+            leg('Día Libre', colors.bgOff, colors.textMain);
+            leg('No Marca/Ausente', colors.bgAlert, colors.textMain);
+            leg('Sin Credencial', colors.bgWarning, colors.textMain);
+            leg('Asistencia OK', colors.bgWhite, colors.textMain); // Just plain white
 
-            drawLegendItem('Día Libre (Gris)', true, false, col1, row1Y);
-            drawLegendItem('No Marcación (Fondo Oscuro)', true, true, col2, row1Y);
-            drawLegendItem('Eventos en Negrita (Lic/Vac)', false, false, col3, row1Y);
-            drawLegendItem('* Día Reducido (Ley 40 Horas)', false, false, col4, row1Y);
+            doc.setTextColor(80, 80, 80);
+            doc.text(`Generado: ${new Date().toLocaleString('es-CL')}`, pageWidth - margin, lY, { align: 'right' });
 
 
-            // --- FOOTER ---
-            const footerY = pageHeight - 10;
-            doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
-            doc.setFontSize(8);
-            doc.text(`Generado: ${new Date().toLocaleString('es-CL')}`, margin, footerY);
-            doc.text('Documento oficial. Impresión B/N optimizada.', pageWidth - margin, footerY, { align: 'right' });
-
+            // Save
             const fileName = `Asistencia_${selectedStaff.rut.replace(/\./g, '')}_${months[selectedMonth]}_${selectedYear}.pdf`;
             doc.save(fileName);
 
@@ -415,7 +400,7 @@ export const RutPdfExportModal = ({
                 <div className="flex items-center justify-between p-6 border-b bg-slate-50">
                     <div>
                         <h2 className="text-xl font-bold text-slate-800">Exportar PDF Mensual</h2>
-                        <p className="text-sm text-slate-500">Generar reporte de asistencia para imprimir</p>
+                        <p className="text-sm text-slate-500">Reporte Compacto (1 Hoja)</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-lg transition-colors text-slate-500">
                         <Icon name="x" size={20} />
@@ -473,25 +458,14 @@ export const RutPdfExportModal = ({
 
                     {/* Preview info card */}
                     {selectedStaff && (
-                        <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                                    <Icon name="user" size={20} />
-                                </div>
-                                <div>
-                                    <div className="font-semibold text-blue-900">{selectedStaff.nombre}</div>
-                                    <div className="text-xs text-blue-700">{selectedStaff.cargo}</div>
-                                </div>
+                        <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
+                            <div className="text-sm font-medium text-center text-gray-600 mb-2">
+                                Vista Previa de Datos
                             </div>
-                            <div className="grid grid-cols-2 gap-2 text-sm mt-3 pt-3 border-t border-blue-100">
-                                <div>
-                                    <span className="text-blue-500 text-xs block">Horario</span>
-                                    <span className="text-blue-900 font-medium">{selectedStaff.horario || 'N/A'}</span>
-                                </div>
-                                <div>
-                                    <span className="text-blue-500 text-xs block">Turno</span>
-                                    <span className="text-blue-900 font-medium">{selectedStaff.turno}</span>
-                                </div>
+                            <div className="grid grid-cols-2 gap-y-2 text-xs">
+                                <div><span className="font-bold">Incidencias:</span> {incidences.noMarcaciones.filter(i => i.rut === selectedStaff.rut).length}</div>
+                                <div><span className="font-bold">Licencias:</span> {licenses.filter(l => l.staff_id === selectedStaff.id).length}</div>
+                                <div><span className="font-bold">Marcas:</span> {marks.filter(m => m.staff_id === selectedStaff.id).length}</div>
                             </div>
                         </div>
                     )}
@@ -508,7 +482,7 @@ export const RutPdfExportModal = ({
                     <button
                         onClick={generatePdf}
                         disabled={!selectedRut || isGenerating}
-                        className="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-600/20 active:scale-95 transition-all flex items-center gap-2"
+                        className="px-5 py-2.5 text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transition-all flex items-center gap-2"
                     >
                         {isGenerating ? (
                             <>
@@ -518,7 +492,7 @@ export const RutPdfExportModal = ({
                         ) : (
                             <>
                                 <Icon name="download" size={18} />
-                                Generar Documento
+                                Generar PDF
                             </>
                         )}
                     </button>
