@@ -38,9 +38,7 @@ const NAVIGATION: NavSection[] = [
     label: 'Aseo',
     icon: 'sparkles',
     items: [
-      { label: 'Interior', to: '/aseo/interior', icon: 'droplet' },
-      { label: 'Exterior', to: '/aseo/exterior', icon: 'spray' },
-      { label: 'Rodillo', to: '/aseo/rodillo', icon: 'brush' },
+      { label: 'Portal Móvil', to: '/aseo', icon: 'sparkles' },
     ],
   },
   {
